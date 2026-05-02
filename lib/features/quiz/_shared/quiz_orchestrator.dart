@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../memory_flip/presentation/screens/memory_flip_screen.dart';
+import '../picture_match/presentation/screens/picture_match_screen.dart';
 
 /// Enum quiz type khớp với cột quiz_type trong DB
 enum QuizType {
@@ -54,11 +55,10 @@ class QuizOrchestrator extends StatelessWidget {
     return switch (question.quizType) {
       QuizType.memoryFlip => MemoryFlipScreen(questionId: question.id),
 
+      // ── Implemented screens ──────────────────────────────────────
+      QuizType.pictureMatch => PictureMatchScreen(questionId: question.id),
+
       // ── Placeholder screens ── sẽ implement ở các sprint tiếp theo
-      QuizType.pictureMatch => _PlaceholderScreen(
-        label: 'Picture Match',
-        questionId: question.id,
-      ),
       QuizType.listenTap => _PlaceholderScreen(
         label: 'Listen & Tap',
         questionId: question.id,
