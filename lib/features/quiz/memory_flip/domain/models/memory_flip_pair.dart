@@ -1,6 +1,7 @@
-import 'package:e_kids/features/quiz/memory_flip/domain/models/card_content.dart';
+import 'package:equatable/equatable.dart';
+import 'card_content.dart';
 
-class MemoryFlipPair {
+class MemoryFlipPair extends Equatable {
   final String id;
   final CardContent cardA;
   final CardContent cardB;
@@ -13,27 +14,28 @@ class MemoryFlipPair {
     required this.cardB,
     this.audioOnMatch,
     this.difficultyWeight = 1,
-  });
-}
+  }) : assert(difficultyWeight >= 1 && difficultyWeight <= 3,
+            'difficultyWeight phải từ 1–3');
 
-class ScoreConfig {
-  final int baseXp;
-  final bool weightMultiplier;
-  final bool timeBonus;
-  final int timeBonusThresholdSec;
-  final int timeBonusXp;
-  final bool flipPenalty;
-  final int flipPenaltyAfter;
-  final int flipPenaltyXp;
+  factory MemoryFlipPair.fromJson(Map<String, dynamic> json) {
+    return MemoryFlipPair(
+      id: json['id'] as String,
+      cardA: CardContent.fromJson(json['card_a'] as Map<String, dynamic>),
+      cardB: CardContent.fromJson(json['card_b'] as Map<String, dynamic>),
+      audioOnMatch: json['audio_on_match'] as String?,
+      difficultyWeight: json['difficulty_weight'] as int? ?? 1,
+    );
+  }
 
-  const ScoreConfig({
-    this.baseXp = 10,
-    this.weightMultiplier = true,
-    this.timeBonus = false,
-    this.timeBonusThresholdSec = 60,
-    this.timeBonusXp = 20,
-    this.flipPenalty = false,
-    this.flipPenaltyAfter = 30,
-    this.flipPenaltyXp = 2,
-  });
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'card_a': cardA.toJson(),
+        'card_b': cardB.toJson(),
+        if (audioOnMatch != null) 'audio_on_match': audioOnMatch,
+        'difficulty_weight': difficultyWeight,
+      };
+
+  @override
+  List<Object?> get props =>
+      [id, cardA, cardB, audioOnMatch, difficultyWeight];
 }

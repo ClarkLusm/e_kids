@@ -1,105 +1,91 @@
-import 'dart:math';
-
-import 'card_content.dart';
 import 'card_state.dart';
 import 'memory_flip_content.dart';
-
-const Object _unset = Object();
+import 'memory_flip_pair.dart';
 
 class MemoryFlipGameState {
-  const MemoryFlipGameState({
-    required this.content,
-    required this.deck,
-    required this.cardStates,
-    required this.cardPairMap,
-    required this.matchedPairIds,
-    this.firstSelectedCardId,
-    this.secondSelectedCardId,
-    this.flipCount = 0,
-    this.score = 0,
-    this.hintsUsed = 0,
-    this.remainingSeconds = 60,
-    this.isCompleted = false,
-  });
-
   final MemoryFlipContent content;
-  final List<CardContent> deck;
-  final Map<String, CardState> cardStates;
-  final Map<String, String> cardPairMap;
-  final Set<String> matchedPairIds;
-  final String? firstSelectedCardId;
-  final String? secondSelectedCardId;
-  final int flipCount;
-  final int score;
-  final int hintsUsed;
-  final int remainingSeconds;
-  final bool isCompleted;
 
-  bool get hasWon => matchedPairIds.length == content.pairs.length;
+  /// Board đã shuffle — mỗi thẻ là 1 CardState độc lập
+  final List<CardState> board;
 
-  double get progress {
-    if (content.pairs.isEmpty) {
-      return 0;
+  int flipCount = 0;
+  int matchCount = 0;
+  int earnedXp = 0;
+
+  /// Thẻ lật đầu tiên đang chờ
+  CardState? firstFlipped;
+
+  final Stopwatch _timer = Stopwatch();
+
+  MemoryFlipGameState(this.content) : board = _buildBoard(content);
+
+  // ─── Factory ───────────────────────────────────────────────
+
+  static List<CardState> _buildBoard(MemoryFlipContent c) {
+    final cards = <CardState>[];
+    for (final pair in c.pairs) {
+      cards.add(CardState(pairId: pair.id, content: pair.cardA, isCardA: true));
+      cards.add(
+        CardState(pairId: pair.id, content: pair.cardB, isCardA: false),
+      );
     }
-    return matchedPairIds.length / content.pairs.length;
+    cards.shuffle();
+    return cards;
   }
 
-  factory MemoryFlipGameState.initial(MemoryFlipContent content, {int? seed}) {
-    final cards = <CardContent>[];
-    final cardPairMap = <String, String>{};
-    final cardStates = <String, CardState>{};
+  // ─── Timer ─────────────────────────────────────────────────
 
-    for (final pair in content.pairs) {
-      cards.add(pair.first);
-      cards.add(pair.second);
-      cardPairMap[pair.first.cardId] = pair.pairId;
-      cardPairMap[pair.second.cardId] = pair.pairId;
-      cardStates[pair.first.cardId] = CardState.faceDown;
-      cardStates[pair.second.cardId] = CardState.faceDown;
+  void startTimer() => _timer.start();
+  void stopTimer() => _timer.stop();
+  int get elapsedSec => _timer.elapsed.inSeconds;
+
+  // ─── Game status ───────────────────────────────────────────
+
+  bool get isComplete => matchCount == content.gridSize.pairCount;
+
+  bool get isFlipLimitReached =>
+      content.maxFlips != null && flipCount >= content.maxFlips!;
+
+  // ─── Score calculation ─────────────────────────────────────
+
+  int computeFinalXp() {
+    final sc = content.scoreConfig;
+
+    // Tính XP cơ bản: mỗi cặp base_xp × difficulty_weight
+    var xp = content.pairs.fold<int>(0, (sum, pair) {
+      final weight = sc.weightMultiplier ? pair.difficultyWeight : 1;
+      return sum + sc.baseXp * weight;
+    });
+
+    // Thưởng thời gian
+    if (sc.timeBonus && elapsedSec <= sc.timeBonusThresholdSec) {
+      xp += sc.timeBonusXp;
     }
 
-    cards.shuffle(Random(seed));
+    // Phạt lật quá nhiều
+    if (sc.flipPenalty && flipCount > sc.flipPenaltyAfter) {
+      final excess = flipCount - sc.flipPenaltyAfter;
+      xp -= excess * sc.flipPenaltyXp;
+    }
 
-    return MemoryFlipGameState(
-      content: content,
-      deck: cards,
-      cardStates: cardStates,
-      cardPairMap: cardPairMap,
-      matchedPairIds: <String>{},
-      remainingSeconds: content.timeLimitSeconds,
-    );
+    return xp.clamp(0, 9999);
   }
 
-  MemoryFlipGameState copyWith({
-    List<CardContent>? deck,
-    Map<String, CardState>? cardStates,
-    Map<String, String>? cardPairMap,
-    Set<String>? matchedPairIds,
-    Object? firstSelectedCardId = _unset,
-    Object? secondSelectedCardId = _unset,
-    int? flipCount,
-    int? score,
-    int? hintsUsed,
-    int? remainingSeconds,
-    bool? isCompleted,
-  }) {
-    return MemoryFlipGameState(
-      content: content,
-      deck: deck ?? this.deck,
-      cardStates: cardStates ?? this.cardStates,
-      cardPairMap: cardPairMap ?? this.cardPairMap,
-      matchedPairIds: matchedPairIds ?? this.matchedPairIds,
-      firstSelectedCardId: identical(firstSelectedCardId, _unset)
-          ? this.firstSelectedCardId
-          : firstSelectedCardId as String?,
-      secondSelectedCardId: identical(secondSelectedCardId, _unset)
-          ? this.secondSelectedCardId
-          : secondSelectedCardId as String?,
-      flipCount: flipCount ?? this.flipCount,
-      score: score ?? this.score,
-      hintsUsed: hintsUsed ?? this.hintsUsed,
-      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
-      isCompleted: isCompleted ?? this.isCompleted,
-    );
+  /// Tính số sao (1–3) dựa trên số lần lật + thời gian
+  int computeStars() {
+    final minFlips = content.gridSize.pairCount * 2;
+    final sc = content.scoreConfig;
+
+    final fastTime = sc.timeBonus && elapsedSec <= sc.timeBonusThresholdSec;
+    final lowFlips = flipCount <= (minFlips * 1.5).ceil();
+    final medFlips = flipCount <= minFlips * 2;
+
+    if (lowFlips && fastTime) return 3;
+    if (medFlips) return 2;
+    return 1;
   }
+
+  /// Lấy MemoryFlipPair từ pairId
+  MemoryFlipPair pairById(String pairId) =>
+      content.pairs.firstWhere((p) => p.id == pairId);
 }

@@ -1,73 +1,114 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+/// Countdown timer widget dùng cho các quiz có giới hạn thời gian.
+/// Gọi [onTimeUp] khi hết giờ.
 class QuizTimerWidget extends StatefulWidget {
+  final int totalSeconds;
+  final VoidCallback onTimeUp;
+  final bool autoStart;
+
   const QuizTimerWidget({
+    required this.totalSeconds,
+    required this.onTimeUp,
+    this.autoStart = true,
     super.key,
-    required this.initialSeconds,
-    required this.onTick,
-    required this.onCompleted,
   });
 
-  final int initialSeconds;
-  final ValueChanged<int> onTick;
-  final Future<void> Function() onCompleted;
-
   @override
-  State<QuizTimerWidget> createState() => _QuizTimerWidgetState();
+  State<QuizTimerWidget> createState() => QuizTimerWidgetState();
 }
 
-class _QuizTimerWidgetState extends State<QuizTimerWidget> {
-  Timer? _timer;
+class QuizTimerWidgetState extends State<QuizTimerWidget>
+    with SingleTickerProviderStateMixin {
   late int _remaining;
+  Timer? _timer;
+  late AnimationController _pulseCtrl;
+  late Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
-    _remaining = widget.initialSeconds;
+    _remaining = widget.totalSeconds;
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _pulseAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.15,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+    if (widget.autoStart) start();
+  }
 
-      if (_remaining <= 0) {
-        timer.cancel();
-        await widget.onCompleted();
-        return;
-      }
-
+  void start() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
       setState(() {
-        _remaining -= 1;
+        if (_remaining > 0) {
+          _remaining--;
+          // Pulse khi còn ≤ 10 giây
+          if (_remaining <= 10) {
+            _pulseCtrl.forward().then((_) => _pulseCtrl.reverse());
+          }
+        } else {
+          _timer?.cancel();
+          widget.onTimeUp();
+        }
       });
-      widget.onTick(_remaining);
     });
   }
 
-  @override
-  void didUpdateWidget(covariant QuizTimerWidget oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialSeconds != widget.initialSeconds) {
-      _remaining = widget.initialSeconds;
-    }
-  }
+  void pause() => _timer?.cancel();
+  void resume() => start();
+  int get remainingSeconds => _remaining;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _pulseCtrl.dispose();
     super.dispose();
+  }
+
+  Color get _timerColor {
+    final pct = _remaining / widget.totalSeconds;
+    if (pct > 0.5) return const Color(0xFF1D9E75);
+    if (pct > 0.25) return const Color(0xFFEF9F27);
+    return const Color(0xFFE24B4A);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(Icons.timer_outlined),
-        const SizedBox(width: 8),
-        Text('$_remaining s'),
-      ],
+    final pct = _remaining / widget.totalSeconds;
+
+    return ScaleTransition(
+      scale: _pulseAnim,
+      child: SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Circular progress
+            CircularProgressIndicator(
+              value: pct,
+              strokeWidth: 3,
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(_timerColor),
+            ),
+            // Số giây
+            Text(
+              '$_remaining',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: _timerColor,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

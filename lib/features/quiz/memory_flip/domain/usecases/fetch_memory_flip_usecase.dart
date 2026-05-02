@@ -1,20 +1,16 @@
 import '../models/memory_flip_content.dart';
 
-typedef FetchMemoryFlipContentHandler =
-    Future<MemoryFlipContent> Function({
-      required String lessonId,
-      required String quizId,
-    });
+/// Interface repository — Data layer implement
+abstract class IMemoryFlipRepository {
+  Future<MemoryFlipContent> fetchById(String questionId);
+}
 
+/// Use case: lấy content_json và parse thành MemoryFlipContent
 class FetchMemoryFlipUseCase {
-  const FetchMemoryFlipUseCase(this._handler);
+  final IMemoryFlipRepository _repository;
 
-  final FetchMemoryFlipContentHandler _handler;
+  const FetchMemoryFlipUseCase(this._repository);
 
-  Future<MemoryFlipContent> call({
-    required String lessonId,
-    required String quizId,
-  }) {
-    return _handler(lessonId: lessonId, quizId: quizId);
-  }
+  Future<MemoryFlipContent> call(String questionId) =>
+      _repository.fetchById(questionId);
 }
