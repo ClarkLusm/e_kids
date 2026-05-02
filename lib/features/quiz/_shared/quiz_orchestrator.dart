@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../fill_blank/presentation/screens/fill_blank_screen.dart';
 import '../memory_flip/presentation/screens/memory_flip_screen.dart';
 import '../picture_match/presentation/screens/picture_match_screen.dart';
 
@@ -67,10 +68,7 @@ class QuizOrchestrator extends StatelessWidget {
         label: 'Letter Scramble',
         questionId: question.id,
       ),
-      QuizType.fillBlank => _PlaceholderScreen(
-        label: 'Fill in the Blank',
-        questionId: question.id,
-      ),
+      QuizType.fillBlank => FillBlankScreen(questionId: question.id),
       QuizType.speakWord => _PlaceholderScreen(
         label: 'Speak Word',
         questionId: question.id,
