@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../fill_blank/presentation/screens/fill_blank_screen.dart';
 import '../letter_scramble/presentation/screens/letter_scramble_screen.dart';
+import '../listen_tap/presentation/screens/listen_tap_screen.dart';
 import '../memory_flip/presentation/screens/memory_flip_screen.dart';
 import '../picture_match/presentation/screens/picture_match_screen.dart';
 
@@ -61,10 +62,7 @@ class QuizOrchestrator extends StatelessWidget {
       QuizType.pictureMatch => PictureMatchScreen(questionId: question.id),
 
       // ── Placeholder screens ── sẽ implement ở các sprint tiếp theo
-      QuizType.listenTap => _PlaceholderScreen(
-        label: 'Listen & Tap',
-        questionId: question.id,
-      ),
+      QuizType.listenTap => ListenTapScreen(questionId: question.id),
       QuizType.letterScramble => LetterScrambleScreen(questionId: question.id),
       QuizType.fillBlank => FillBlankScreen(questionId: question.id),
       QuizType.speakWord => _PlaceholderScreen(
