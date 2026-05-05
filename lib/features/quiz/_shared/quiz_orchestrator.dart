@@ -5,6 +5,7 @@ import '../listen_tap/presentation/screens/listen_tap_screen.dart';
 import '../memory_flip/presentation/screens/memory_flip_screen.dart';
 import '../picture_match/presentation/screens/picture_match_screen.dart';
 import '../sort_bucket/presentation/screens/sort_bucket_screen.dart';
+import '../speak_word/presentation/screens/speak_word_screen.dart';
 
 /// Enum quiz type khớp với cột quiz_type trong DB
 enum QuizType {
@@ -66,10 +67,7 @@ class QuizOrchestrator extends StatelessWidget {
       QuizType.listenTap => ListenTapScreen(questionId: question.id),
       QuizType.letterScramble => LetterScrambleScreen(questionId: question.id),
       QuizType.fillBlank => FillBlankScreen(questionId: question.id),
-      QuizType.speakWord => _PlaceholderScreen(
-        label: 'Speak Word',
-        questionId: question.id,
-      ),
+      QuizType.speakWord => SpeakWordScreen(questionId: question.id),
       QuizType.sortBucket => SortBucketScreen(questionId: question.id),
       QuizType.wordPop => _PlaceholderScreen(
         label: 'Word Pop',
