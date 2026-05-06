@@ -6,6 +6,8 @@ import '../memory_flip/presentation/screens/memory_flip_screen.dart';
 import '../picture_match/presentation/screens/picture_match_screen.dart';
 import '../sort_bucket/presentation/screens/sort_bucket_screen.dart';
 import '../speak_word/presentation/screens/speak_word_screen.dart';
+import '../story_builder/presentation/screens/story_builder_screen.dart';
+import '../word_pop/presentation/screens/word_pop_screen.dart';
 
 /// Enum quiz type khớp với cột quiz_type trong DB
 enum QuizType {
@@ -69,56 +71,8 @@ class QuizOrchestrator extends StatelessWidget {
       QuizType.fillBlank => FillBlankScreen(questionId: question.id),
       QuizType.speakWord => SpeakWordScreen(questionId: question.id),
       QuizType.sortBucket => SortBucketScreen(questionId: question.id),
-      QuizType.wordPop => _PlaceholderScreen(
-        label: 'Word Pop',
-        questionId: question.id,
-      ),
-      QuizType.storyBuilder => _PlaceholderScreen(
-        label: 'Story Builder',
-        questionId: question.id,
-      ),
+      QuizType.wordPop => WordPopScreen(questionId: question.id),
+      QuizType.storyBuilder => StoryBuilderScreen(questionId: question.id),
     };
-  }
-}
-
-/// Placeholder tạm thời cho các quiz chưa implement
-class _PlaceholderScreen extends StatelessWidget {
-  final String label;
-  final String questionId;
-
-  const _PlaceholderScreen({required this.label, required this.questionId});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(label)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.construction_rounded,
-              size: 48,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '$label\nĐang phát triển...',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'ID: $questionId',
-              style: const TextStyle(
-                fontSize: 11,
-                color: Colors.grey,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
