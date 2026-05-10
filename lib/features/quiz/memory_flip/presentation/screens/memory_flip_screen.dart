@@ -4,12 +4,16 @@ import '../providers/memory_flip_controller.dart';
 import '../widgets/flip_card_widget.dart';
 import '../widgets/game_header_widget.dart';
 import '../widgets/result_sheet_widget.dart';
-import '../../domain/models/card_state.dart';
 
 class MemoryFlipScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final VoidCallback? onNext;
 
-  const MemoryFlipScreen({required this.questionId, super.key});
+  const MemoryFlipScreen({
+    required this.questionId,
+    required this.onNext,
+    super.key,
+  });
 
   @override
   ConsumerState<MemoryFlipScreen> createState() => _MemoryFlipScreenState();
