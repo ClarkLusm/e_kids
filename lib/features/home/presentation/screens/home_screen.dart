@@ -1,6 +1,8 @@
+import 'package:e_kids/features/auth/presentation/providers/auth_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   // Màu từ tailwind.config
@@ -12,7 +14,13 @@ class HomeScreen extends StatelessWidget {
   static const bgBlue = Color(0xFFEFF6FF); // blue-50
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).valueOrNull;
+    final childName = user?.displayName?.trim().isNotEmpty == true
+        ? user!.displayName!.trim()
+        : 'Bạn';
+    final avatar = _avatarEmoji(user?.avatarId);
+
     return Scaffold(
       backgroundColor: bgBlue,
       body: SafeArea(
@@ -24,7 +32,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topBar(),
+                  _topBar(childName: childName, avatar: avatar),
                   const SizedBox(height: 24),
                   _progressSection(),
                   const SizedBox(height: 24),
@@ -36,14 +44,13 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
-            _bottomNav(),
           ],
         ),
       ),
     );
   }
 
-  Widget _topBar() {
+  Widget _topBar({required String childName, required String avatar}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -61,13 +68,13 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               alignment: Alignment.center,
-              child: const Text('👦', style: TextStyle(fontSize: 32)),
+              child: Text(avatar, style: const TextStyle(fontSize: 32)),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
+              children: [
+                const Text(
                   'CẤP ĐỘ 3',
                   style: TextStyle(
                     fontFamily: 'PlusJakartaSans',
@@ -78,8 +85,8 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Chào, Minh!',
-                  style: TextStyle(
+                  'Chào, $childName!',
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
@@ -116,6 +123,18 @@ class HomeScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _avatarEmoji(String? avatarId) {
+    return switch (avatarId) {
+      'lion' => '🦁',
+      'rabbit' => '🐰',
+      'cat' => '🐱',
+      'panda' => '🐼',
+      'fox' => '🦊',
+      'bear' => '🐻',
+      _ => '👦',
+    };
   }
 
   Widget _progressSection() {
@@ -504,87 +523,6 @@ class HomeScreen extends StatelessWidget {
               fontSize: 16,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _bottomNav() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        height: 110,
-        padding: const EdgeInsets.fromLTRB(16, 16, 24, 24),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(48)),
-          border: const Border(
-            top: BorderSide(color: Color(0xFFDBEAFE), width: 4),
-          ),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 20)],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            _navItem(Icons.home, 'Trang chủ', true, kidYellow),
-            _navItem(Icons.menu_book, 'Học', false, Colors.grey),
-            _navItem(Icons.sports_esports, 'Chơi', false, Colors.grey),
-            _navItem(Icons.person, 'Tôi', false, Colors.grey),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, bool active, Color color) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: EdgeInsets.symmetric(
-        horizontal: active ? 24 : 8,
-        vertical: active ? 12 : 8,
-      ),
-      transform: Matrix4.translationValues(0, active ? -16 : 0, 0),
-      decoration: BoxDecoration(
-        color: active ? kidYellow : Colors.transparent,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: active ? const Color(0xFFFDE047) : Colors.transparent,
-          width: 2,
-        ),
-        boxShadow: active
-            ? const [BoxShadow(color: Colors.black26, blurRadius: 8)]
-            : [],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 28,
-            color: active ? const Color(0xFF1E293B) : Colors.grey,
-          ),
-          if (active)
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          if (!active)
-            Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'PlusJakartaSans',
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
         ],
       ),
     );

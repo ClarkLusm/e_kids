@@ -10,6 +10,7 @@ import 'package:e_kids/features/auth/presentation/screens/login_screen.dart';
 import 'package:e_kids/features/auth/presentation/screens/register_screen.dart';
 import 'package:e_kids/features/auth/presentation/screens/select_profile_screen.dart';
 import 'package:e_kids/features/splash/presentation/screens/splash_screen.dart';
+import 'package:e_kids/features/settings/presentation/screens/settings_screen.dart';
 import 'package:e_kids/features/auth/presentation/providers/auth_providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -83,7 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.settings,
-        builder: (_, __) => const _LocalPlaceholderScreen(title: 'Settings'),
+        builder: (_, __) => const SettingsScreen(),
       ),
 
       ShellRoute(

@@ -63,11 +63,11 @@ flutter:
     - assets/images/
     - assets/animations/
     - .env
-  fonts:
-    - family: Nunito          # font tròn, thân thiện với trẻ em
-      fonts:
-        - asset: assets/fonts/Nunito-Regular.ttf
-        - asset: assets/fonts/Nunito-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Nunito-Bold.ttf
-          weight: 700
+  # fonts:
+  #   - family: Nunito          # font tròn, thân thiện với trẻ em
+  #     fonts:
+  #       - asset: assets/fonts/Nunito-Regular.ttf
+  #       - asset: assets/fonts/Nunito-SemiBold.ttf
+  #         weight: 600
+  #       - asset: assets/fonts/Nunito-Bold.ttf
+  #         weight: 700
