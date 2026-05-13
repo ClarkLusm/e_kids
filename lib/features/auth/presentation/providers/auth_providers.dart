@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/database/database_providers.dart';
 import '../../../../data/datasources/remote/auth_remote_datasource.dart';
 import '../../../../data/repositories/local/local_auth_repository.dart';
 import '../../../../data/repositories/auth_repository_impl.dart';
@@ -25,7 +26,7 @@ final authRemoteDataSourceProvider = Provider((ref) {
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final useRemote = ref.watch(useRemoteAuthProvider);
   if (!useRemote) {
-    return LocalAuthRepository();
+    return LocalAuthRepository(ref.watch(appDatabaseProvider));
   }
 
   // TODO(api): repository này đã sẵn sàng cho Supabase, chỉ cần bật flag

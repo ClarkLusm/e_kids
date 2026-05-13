@@ -3,6 +3,10 @@ import '../../data/picture_match_repository.dart';
 import '../../domain/models/picture_match_state.dart';
 import '../../domain/models/picture_match_choice.dart';
 import '../../domain/usecases/picture_match_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository providers ─────────────────────────────────────────────────
 
@@ -12,7 +16,7 @@ final pictureMatchRepoProvider = Provider<IPictureMatchRepository>(
 
 final pictureMatchAttemptRepoProvider =
     Provider<IPictureMatchAttemptRepository>(
-      (_) => MockPictureMatchAttemptRepository(),
+      (ref) => ref.watch(localPictureMatchAttemptRepositoryProvider),
     );
 
 // ─── UseCase providers ────────────────────────────────────────────────────
@@ -33,20 +37,20 @@ final pictureMatchControllerProvider =
     AsyncNotifierProviderFamily<
       PictureMatchController,
       PictureMatchState,
-      String
+      QuizQuestionArgs
     >(PictureMatchController.new);
 
 // ─── Controller ───────────────────────────────────────────────────────────
 
 class PictureMatchController
-    extends FamilyAsyncNotifier<PictureMatchState, String> {
+    extends FamilyAsyncNotifier<PictureMatchState, QuizQuestionArgs> {
   late final Stopwatch _stopwatch;
 
   @override
-  Future<PictureMatchState> build(String questionId) async {
+  Future<PictureMatchState> build(QuizQuestionArgs args) async {
     _stopwatch = Stopwatch()..start();
     final useCase = ref.read(fetchPictureMatchProvider);
-    final content = await useCase.call(questionId);
+    final content = await useCase.call(args.questionId);
     return PictureMatchState(content);
   }
 
@@ -64,7 +68,7 @@ class PictureMatchController
 
     if (isCorrect) {
       gs.status = PictureMatchStatus.correct;
-      gs.xpEarned = _calcXp(gs.timeTakenMs);
+      gs.xpEarned = _calcXp(gs, isCorrect: true);
     } else {
       gs.status = PictureMatchStatus.wrong;
       gs.xpEarned = 0;
@@ -111,17 +115,20 @@ class PictureMatchController
       ..start();
     state = const AsyncLoading();
     final useCase = ref.read(fetchPictureMatchProvider);
-    final content = await useCase.call(arg);
+    final content = await useCase.call(arg.questionId);
     state = AsyncData(PictureMatchState(content));
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
-  int _calcXp(int timeTakenMs) {
-    const baseXp = 10;
-    // Thưởng tốc độ: trả lời trong 5 giây được +5 XP
-    final bonus = timeTakenMs < 5000 ? 5 : 0;
-    return baseXp + bonus;
+  int _calcXp(PictureMatchState gs, {required bool isCorrect}) {
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: isCorrect,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+      ),
+    );
   }
 
   Future<void> _saveResult(PictureMatchState gs, bool isCorrect) async {
@@ -129,7 +136,8 @@ class PictureMatchController
     await saveUseCase.call(
       PictureMatchResult(
         childId: 'mock_child_id',
-        questionId: arg,
+        lessonId: arg.lessonId,
+        questionId: arg.questionId,
         isCorrect: isCorrect,
         selectedWord: gs.selectedWord ?? '',
         correctWord: gs.content.correctWord,

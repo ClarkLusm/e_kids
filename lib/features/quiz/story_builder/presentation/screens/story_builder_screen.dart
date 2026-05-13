@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../_shared/question_ref.dart';
 import '../../../_shared/xp_animation_widget.dart';
 import '../../domain/models/story_builder_state.dart';
 import '../../presentation/providers/story_builder_controller.dart';
@@ -9,12 +10,14 @@ import '../../presentation/widgets/story_progress_widget.dart';
 
 class StoryBuilderScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const StoryBuilderScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -28,14 +31,18 @@ class StoryBuilderScreen extends ConsumerStatefulWidget {
 class _StoryBuilderScreenState extends ConsumerState<StoryBuilderScreen> {
   final GlobalKey _contentKey = GlobalKey();
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   StoryBuilderController get _ctrl =>
-      ref.read(storyBuilderControllerProvider(widget.questionId).notifier);
+      ref.read(storyBuilderControllerProvider(_controllerArgs).notifier);
 
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(
-      storyBuilderControllerProvider(widget.questionId),
+      storyBuilderControllerProvider(_controllerArgs),
     );
 
     // Hiện result sheet khi complete
@@ -55,7 +62,7 @@ class _StoryBuilderScreenState extends ConsumerState<StoryBuilderScreen> {
         error: (e, _) => _ErrorView(
           error: e,
           onRetry: () =>
-              ref.invalidate(storyBuilderControllerProvider(widget.questionId)),
+              ref.invalidate(storyBuilderControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildBody(context, gs),
       ),
@@ -213,7 +220,7 @@ class _StoryBuilderScreenState extends ConsumerState<StoryBuilderScreen> {
         onNext: () {
           Navigator.of(context).pop();
           if (widget.onNext != null) {
-            widget.onNext!();
+            widget.onNext!(gs.xpEarned);
           } else {
             Navigator.of(context).pop();
           }

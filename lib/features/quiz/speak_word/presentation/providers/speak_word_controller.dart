@@ -4,6 +4,10 @@ import '../../data/speak_word_repository.dart';
 import '../../domain/models/speak_word_state.dart';
 import '../../domain/models/speech_recognition_service.dart';
 import '../../domain/usecases/speak_word_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository & service providers ──────────────────────────────────────
 
@@ -12,7 +16,7 @@ final speakWordRepoProvider = Provider<ISpeakWordRepository>(
 );
 
 final speakWordAttemptRepoProvider = Provider<ISpeakWordAttemptRepository>(
-  (_) => MockSpeakWordAttemptRepository(),
+  (ref) => ref.watch(localSpeakWordAttemptRepositoryProvider),
 );
 
 final speechRecognitionProvider = Provider<ISpeechRecognitionService>(
@@ -32,18 +36,23 @@ final saveSpeakWordProvider = Provider<SaveSpeakWordResultUseCase>(
 // ─── Controller ───────────────────────────────────────────────────────────
 
 final speakWordControllerProvider =
-    AsyncNotifierProviderFamily<SpeakWordController, SpeakWordState, String>(
-      SpeakWordController.new,
-    );
+    AsyncNotifierProviderFamily<
+      SpeakWordController,
+      SpeakWordState,
+      QuizQuestionArgs
+    >(SpeakWordController.new);
 
-class SpeakWordController extends FamilyAsyncNotifier<SpeakWordState, String> {
+class SpeakWordController
+    extends FamilyAsyncNotifier<SpeakWordState, QuizQuestionArgs> {
   late final Stopwatch _stopwatch;
   bool _sttInitialized = false;
 
   @override
-  Future<SpeakWordState> build(String questionId) async {
+  Future<SpeakWordState> build(QuizQuestionArgs args) async {
     _stopwatch = Stopwatch()..start();
-    final content = await ref.read(fetchSpeakWordProvider).call(questionId);
+    final content = await ref
+        .read(fetchSpeakWordProvider)
+        .call(args.questionId);
 
     // Khởi tạo STT ngầm khi load xong
     _initStt();
@@ -207,25 +216,21 @@ class SpeakWordController extends FamilyAsyncNotifier<SpeakWordState, String> {
       ..reset()
       ..start();
     state = const AsyncLoading();
-    final content = await ref.read(fetchSpeakWordProvider).call(arg);
+    final content = await ref.read(fetchSpeakWordProvider).call(arg.questionId);
     state = AsyncData(SpeakWordState(content));
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────
 
   int _calcXp(SpeakWordState gs) {
-    const base = 20;
-    // Thưởng ít lần thử
-    final attemptBonus = gs.attemptCount == 1
-        ? 10
-        : gs.attemptCount == 2
-        ? 5
-        : 0;
-    // Thưởng similarity cao
-    final simBonus = gs.lastAttempt != null && gs.lastAttempt!.similarity >= 0.9
-        ? 5
-        : 0;
-    return base + attemptBonus + simBonus;
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: true,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+        attemptIndex: gs.attemptCount,
+      ),
+    );
   }
 
   void _saveResult(SpeakWordState gs) {
@@ -234,7 +239,8 @@ class SpeakWordController extends FamilyAsyncNotifier<SpeakWordState, String> {
         .call(
           SpeakWordResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: gs.isCorrect,
             targetWord: gs.content.targetWord,
             bestTranscript: gs.lastAttempt?.transcript,

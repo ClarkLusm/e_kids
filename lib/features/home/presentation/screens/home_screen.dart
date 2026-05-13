@@ -1,6 +1,53 @@
 import 'package:e_kids/features/auth/presentation/providers/auth_providers.dart';
+import 'package:e_kids/features/lesson/domain/models/lesson_models.dart';
+import 'package:e_kids/features/lesson/presentation/providers/lesson_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final homeLearningSummaryProvider =
+    FutureProvider.autoDispose<HomeLearningSummary>((ref) async {
+      final childId = ref.watch(currentChildIdProvider);
+      final progressMap = await ref
+          .watch(lessonProgressDaoProvider)
+          .getProgressByChild(childId);
+      return HomeLearningSummary.fromProgress(progressMap.values);
+    });
+
+class HomeLearningSummary {
+  const HomeLearningSummary({
+    required this.totalXp,
+    required this.completedLessons,
+  });
+
+  final int totalXp;
+  final int completedLessons;
+
+  static const empty = HomeLearningSummary(totalXp: 0, completedLessons: 0);
+
+  factory HomeLearningSummary.fromProgress(
+    Iterable<LessonProgress> progressItems,
+  ) {
+    var totalXp = 0;
+    var completedLessons = 0;
+
+    for (final progress in progressItems) {
+      totalXp += progress.totalXpEarned;
+      if (progress.isDone) {
+        completedLessons++;
+      }
+    }
+
+    return HomeLearningSummary(
+      totalXp: totalXp,
+      completedLessons: completedLessons,
+    );
+  }
+
+  int get level => (totalXp ~/ 100) + 1;
+  int get nextLevel => level + 1;
+  double get levelProgress => ((totalXp % 100) / 100).clamp(0.0, 1.0);
+  int get levelProgressPercent => (levelProgress * 100).round();
+}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -20,6 +67,9 @@ class HomeScreen extends ConsumerWidget {
         ? user!.displayName!.trim()
         : 'Bạn';
     final avatar = _avatarEmoji(user?.avatarId);
+    final summary =
+        ref.watch(homeLearningSummaryProvider).valueOrNull ??
+        HomeLearningSummary.empty;
 
     return Scaffold(
       backgroundColor: bgBlue,
@@ -32,9 +82,14 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _topBar(childName: childName, avatar: avatar),
+                  _topBar(
+                    childName: childName,
+                    avatar: avatar,
+                    level: summary.level,
+                    totalXp: summary.totalXp,
+                  ),
                   const SizedBox(height: 24),
-                  _progressSection(),
+                  _progressSection(summary),
                   const SizedBox(height: 24),
                   _continueCard(context),
                   const SizedBox(height: 32),
@@ -50,7 +105,12 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _topBar({required String childName, required String avatar}) {
+  Widget _topBar({
+    required String childName,
+    required String avatar,
+    required int level,
+    required int totalXp,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -74,9 +134,9 @@ class HomeScreen extends ConsumerWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'CẤP ĐỘ 3',
-                  style: TextStyle(
+                Text(
+                  'CẤP ĐỘ $level',
+                  style: const TextStyle(
                     fontFamily: 'PlusJakartaSans',
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -106,12 +166,12 @@ class HomeScreen extends ConsumerWidget {
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
           ),
           child: Row(
-            children: const [
-              Icon(Icons.stars, color: kidYellow, size: 28),
-              SizedBox(width: 6),
+            children: [
+              const Icon(Icons.stars, color: kidYellow, size: 28),
+              const SizedBox(width: 6),
               Text(
-                '320 XP',
-                style: TextStyle(
+                '$totalXp XP',
+                style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
@@ -137,7 +197,7 @@ class HomeScreen extends ConsumerWidget {
     };
   }
 
-  Widget _progressSection() {
+  Widget _progressSection(HomeLearningSummary summary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -153,8 +213,8 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
+                children: [
+                  const Text(
                     'Tiến độ hiện tại',
                     style: TextStyle(
                       fontFamily: 'PlusJakartaSans',
@@ -164,8 +224,8 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   Text(
-                    '75% tới Cấp 4',
-                    style: TextStyle(
+                    '${summary.levelProgressPercent}% tới Cấp ${summary.nextLevel}',
+                    style: const TextStyle(
                       fontFamily: 'PlusJakartaSans',
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -186,7 +246,7 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   FractionallySizedBox(
-                    widthFactor: 0.75,
+                    widthFactor: summary.levelProgress,
                     child: Container(
                       height: 24,
                       decoration: const BoxDecoration(
@@ -210,14 +270,14 @@ class HomeScreen extends ConsumerWidget {
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: const Color(0xFFFECACA), width: 2),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('🔥', style: TextStyle(fontSize: 24)),
-              SizedBox(width: 8),
+              const Text('📚', style: TextStyle(fontSize: 24)),
+              const SizedBox(width: 8),
               Text(
-                '5 ngày liên tiếp!',
-                style: TextStyle(
+                '${summary.completedLessons} bài đã hoàn thành',
+                style: const TextStyle(
                   fontFamily: 'PlusJakartaSans',
                   fontWeight: FontWeight.w900,
                   color: Color(0xFFDC2626),

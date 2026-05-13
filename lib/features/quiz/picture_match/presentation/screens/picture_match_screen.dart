@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../_shared/hint_button_widget.dart';
+import '../../../_shared/question_ref.dart';
 import '../../../_shared/quiz_result_sheet.dart';
 import '../../../_shared/xp_animation_widget.dart';
 import '../../domain/models/picture_match_state.dart';
@@ -11,14 +12,16 @@ import '../providers/picture_match_controller.dart';
 
 class PictureMatchScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
 
   /// Bao nhiêu câu trong session hiện tại (hiện progress bar)
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const PictureMatchScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -32,14 +35,18 @@ class PictureMatchScreen extends ConsumerStatefulWidget {
 class _PictureMatchScreenState extends ConsumerState<PictureMatchScreen> {
   final GlobalKey _imageKey = GlobalKey();
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(
-      pictureMatchControllerProvider(widget.questionId),
+      pictureMatchControllerProvider(_controllerArgs),
     );
     final ctrl = ref.read(
-      pictureMatchControllerProvider(widget.questionId).notifier,
+      pictureMatchControllerProvider(_controllerArgs).notifier,
     );
 
     return Scaffold(
@@ -50,7 +57,7 @@ class _PictureMatchScreenState extends ConsumerState<PictureMatchScreen> {
         error: (e, _) => _ErrorView(
           error: e,
           onRetry: () =>
-              ref.invalidate(pictureMatchControllerProvider(widget.questionId)),
+              ref.invalidate(pictureMatchControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildBody(context, gs, ctrl),
       ),
@@ -77,9 +84,7 @@ class _PictureMatchScreenState extends ConsumerState<PictureMatchScreen> {
             maxHints: 2,
             label: 'Nghe',
             onHint: () => ref
-                .read(
-                  pictureMatchControllerProvider(widget.questionId).notifier,
-                )
+                .read(pictureMatchControllerProvider(_controllerArgs).notifier)
                 .playImageAudio(),
           ),
         ),
@@ -169,7 +174,7 @@ class _PictureMatchScreenState extends ConsumerState<PictureMatchScreen> {
 
   void _handleNext(BuildContext context, PictureMatchState gs) {
     if (widget.onNext != null) {
-      widget.onNext!();
+      widget.onNext!(gs.xpEarned);
       return;
     }
     // Nếu không có callback next → hiện result sheet và pop
@@ -190,9 +195,7 @@ class _PictureMatchScreenState extends ConsumerState<PictureMatchScreen> {
             Navigator.of(context).pop();
             _resultShown = false;
             ref
-                .read(
-                  pictureMatchControllerProvider(widget.questionId).notifier,
-                )
+                .read(pictureMatchControllerProvider(_controllerArgs).notifier)
                 .retry();
           },
           onNext: () {

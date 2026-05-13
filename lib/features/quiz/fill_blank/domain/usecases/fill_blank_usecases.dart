@@ -14,6 +14,7 @@ abstract class IFillBlankAttemptRepository {
 
 class FillBlankResult {
   final String childId;
+  final String lessonId;
   final String questionId;
   final String? sessionId;
   final bool isCorrect;
@@ -25,6 +26,7 @@ class FillBlankResult {
 
   const FillBlankResult({
     required this.childId,
+    required this.lessonId,
     required this.questionId,
     this.sessionId,
     required this.isCorrect,
@@ -37,6 +39,7 @@ class FillBlankResult {
 
   Map<String, dynamic> toJson() => {
     'child_id': childId,
+    'lesson_id': lessonId,
     'question_id': questionId,
     if (sessionId != null) 'session_id': sessionId,
     'is_correct': isCorrect,

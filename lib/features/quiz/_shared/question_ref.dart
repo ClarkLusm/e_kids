@@ -69,3 +69,13 @@ class QuestionRef extends Equatable {
     sortOrder,
   ];
 }
+
+class QuizQuestionArgs extends Equatable {
+  final String questionId;
+  final String lessonId;
+
+  const QuizQuestionArgs({required this.questionId, required this.lessonId});
+
+  @override
+  List<Object?> get props => [questionId, lessonId];
+}

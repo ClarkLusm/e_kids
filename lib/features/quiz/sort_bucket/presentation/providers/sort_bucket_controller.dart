@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/sort_bucket_repository.dart';
 import '../../domain/models/sort_bucket_state.dart';
 import '../../domain/usecases/sort_bucket_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository providers ─────────────────────────────────────────────────
 
@@ -11,7 +15,7 @@ final sortBucketRepoProvider = Provider<ISortBucketRepository>(
 );
 
 final sortBucketAttemptRepoProvider = Provider<ISortBucketAttemptRepository>(
-  (_) => MockSortBucketAttemptRepository(),
+  (ref) => ref.watch(localSortBucketAttemptRepositoryProvider),
 );
 
 // ─── UseCase providers ────────────────────────────────────────────────────
@@ -27,18 +31,22 @@ final saveSortBucketProvider = Provider<SaveSortBucketResultUseCase>(
 // ─── Controller ───────────────────────────────────────────────────────────
 
 final sortBucketControllerProvider =
-    AsyncNotifierProviderFamily<SortBucketController, SortBucketState, String>(
-      SortBucketController.new,
-    );
+    AsyncNotifierProviderFamily<
+      SortBucketController,
+      SortBucketState,
+      QuizQuestionArgs
+    >(SortBucketController.new);
 
 class SortBucketController
-    extends FamilyAsyncNotifier<SortBucketState, String> {
+    extends FamilyAsyncNotifier<SortBucketState, QuizQuestionArgs> {
   late final Stopwatch _stopwatch;
 
   @override
-  Future<SortBucketState> build(String questionId) async {
+  Future<SortBucketState> build(QuizQuestionArgs args) async {
     _stopwatch = Stopwatch()..start();
-    final content = await ref.read(fetchSortBucketProvider).call(questionId);
+    final content = await ref
+        .read(fetchSortBucketProvider)
+        .call(args.questionId);
     return SortBucketState(content);
   }
 
@@ -146,24 +154,22 @@ class SortBucketController
       ..reset()
       ..start();
     state = const AsyncLoading();
-    final content = await ref.read(fetchSortBucketProvider).call(arg);
+    final content = await ref
+        .read(fetchSortBucketProvider)
+        .call(arg.questionId);
     state = AsyncData(SortBucketState(content));
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────
 
   int _calcXp(SortBucketState gs) {
-    if (gs.content.allowPartialScore) {
-      // Tính theo tỉ lệ: mỗi item đúng = 10 XP
-      const xpPerItem = 10;
-      var xp = gs.correctCount * xpPerItem;
-      // Bonus nếu tất cả đúng
-      if (gs.correctCount == gs.content.items.length) xp += 20;
-      return xp;
-    } else {
-      // All-or-nothing
-      return gs.correctCount == gs.content.items.length ? 50 : 0;
-    }
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: gs.correctCount == gs.content.items.length,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+      ),
+    );
   }
 
   void _saveResult(SortBucketState gs) {
@@ -179,7 +185,8 @@ class SortBucketController
         .call(
           SortBucketResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: gs.correctCount == gs.content.items.length,
             correctCount: gs.correctCount,
             totalCount: gs.content.items.length,

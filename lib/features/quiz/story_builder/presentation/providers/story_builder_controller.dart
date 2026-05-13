@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/story_builder_repository.dart';
 import '../../domain/models/story_builder_state.dart';
 import '../../domain/usecases/story_builder_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository providers ─────────────────────────────────────────────────
 
@@ -12,7 +16,7 @@ final storyBuilderRepoProvider = Provider<IStoryBuilderRepository>(
 
 final storyBuilderAttemptRepoProvider =
     Provider<IStoryBuilderAttemptRepository>(
-      (_) => MockStoryBuilderAttemptRepository(),
+      (ref) => ref.watch(localStoryBuilderAttemptRepositoryProvider),
     );
 
 // ─── UseCase providers ────────────────────────────────────────────────────
@@ -32,17 +36,19 @@ final storyBuilderControllerProvider =
     AsyncNotifierProviderFamily<
       StoryBuilderController,
       StoryBuilderState,
-      String
+      QuizQuestionArgs
     >(StoryBuilderController.new);
 
 class StoryBuilderController
-    extends FamilyAsyncNotifier<StoryBuilderState, String> {
+    extends FamilyAsyncNotifier<StoryBuilderState, QuizQuestionArgs> {
   final Stopwatch _stopwatch = Stopwatch();
 
   @override
-  Future<StoryBuilderState> build(String questionId) async {
+  Future<StoryBuilderState> build(QuizQuestionArgs args) async {
     _stopwatch.start();
-    final content = await ref.read(fetchStoryBuilderProvider).call(questionId);
+    final content = await ref
+        .read(fetchStoryBuilderProvider)
+        .call(args.questionId);
     return StoryBuilderState(content);
   }
 
@@ -173,21 +179,28 @@ class StoryBuilderController
       ..reset()
       ..start();
     state = const AsyncLoading();
-    final content = await ref.read(fetchStoryBuilderProvider).call(arg);
+    final content = await ref
+        .read(fetchStoryBuilderProvider)
+        .call(arg.questionId);
     state = AsyncData(StoryBuilderState(content));
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────
 
   int _calcXp(StoryBuilderState gs) {
-    const perSentence = 15;
-    var xp = gs.correctCount * perSentence;
+    final wrongAttempts = gs.sentenceStates.fold<int>(
+      0,
+      (sum, sentence) => sum + sentence.wrongAttempts,
+    );
 
-    // Bonus: không sai câu nào
-    final noWrong = gs.sentenceStates.every((s) => s.wrongAttempts == 0);
-    if (noWrong) xp += 20;
-
-    return xp;
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: gs.correctCount == gs.totalSentences,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+        attemptIndex: wrongAttempts + 1,
+      ),
+    );
   }
 
   void _saveResult(StoryBuilderState gs) {
@@ -208,7 +221,8 @@ class StoryBuilderController
         .call(
           StoryBuilderResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: gs.correctCount == gs.totalSentences,
             correctSentences: gs.correctCount,
             totalSentences: gs.totalSentences,

@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/listen_tap_repository.dart';
 import '../../domain/models/listen_tap_state.dart';
 import '../../domain/usecases/listen_tap_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository & service providers ──────────────────────────────────────
 
@@ -11,7 +15,7 @@ final listenTapRepoProvider = Provider<IListenTapRepository>(
 );
 
 final listenTapAttemptRepoProvider = Provider<IListenTapAttemptRepository>(
-  (_) => MockListenTapAttemptRepository(),
+  (ref) => ref.watch(localListenTapAttemptRepositoryProvider),
 );
 
 final audioPlayerServiceProvider = Provider<IAudioPlayerService>(
@@ -31,20 +35,25 @@ final saveListenTapProvider = Provider<SaveListenTapResultUseCase>(
 // ─── Controller provider ──────────────────────────────────────────────────
 
 final listenTapControllerProvider =
-    AsyncNotifierProviderFamily<ListenTapController, ListenTapState, String>(
-      ListenTapController.new,
-    );
+    AsyncNotifierProviderFamily<
+      ListenTapController,
+      ListenTapState,
+      QuizQuestionArgs
+    >(ListenTapController.new);
 
 // ─── Controller ───────────────────────────────────────────────────────────
 
-class ListenTapController extends FamilyAsyncNotifier<ListenTapState, String> {
+class ListenTapController
+    extends FamilyAsyncNotifier<ListenTapState, QuizQuestionArgs> {
   late final Stopwatch _stopwatch;
   bool _timerStarted = false;
 
   @override
-  Future<ListenTapState> build(String questionId) async {
+  Future<ListenTapState> build(QuizQuestionArgs args) async {
     _stopwatch = Stopwatch();
-    final content = await ref.read(fetchListenTapProvider).call(questionId);
+    final content = await ref
+        .read(fetchListenTapProvider)
+        .call(args.questionId);
     final gs = ListenTapState(content);
 
     // Auto-play audio khi load xong
@@ -126,7 +135,7 @@ class ListenTapController extends FamilyAsyncNotifier<ListenTapState, String> {
       ..reset()
       ..stop();
     state = const AsyncLoading();
-    final content = await ref.read(fetchListenTapProvider).call(arg);
+    final content = await ref.read(fetchListenTapProvider).call(arg.questionId);
     final gs = ListenTapState(content);
     await _playAudio(content.audioUrl, gs);
     state = AsyncData(gs);
@@ -135,16 +144,14 @@ class ListenTapController extends FamilyAsyncNotifier<ListenTapState, String> {
   // ─── Helpers ──────────────────────────────────────────────────────
 
   int _calcXp(ListenTapState gs) {
-    const base = 10;
-    // Thưởng ít replay: nghe 1 lần +5, nghe 2 lần +2
-    final replayBonus = gs.replayCount <= 1
-        ? 5
-        : gs.replayCount == 2
-        ? 2
-        : 0;
-    // Thưởng tốc độ
-    final speedBonus = gs.timeTakenMs < 6000 ? 5 : 0;
-    return base + replayBonus + speedBonus;
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: true,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+        attemptIndex: gs.replayCount + 1,
+      ),
+    );
   }
 
   Future<void> _saveResult(ListenTapState gs, bool isCorrect) async {
@@ -153,7 +160,8 @@ class ListenTapController extends FamilyAsyncNotifier<ListenTapState, String> {
         .call(
           ListenTapResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: isCorrect,
             selectedWord: gs.selectedWord ?? '',
             correctWord: gs.content.correctChoice.word,

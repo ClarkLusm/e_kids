@@ -45,7 +45,7 @@ class QuizOrchestrator extends StatelessWidget {
   final QuestionRef question;
 
   /// Callback khi hoàn thành — QuizRunner dùng để next
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const QuizOrchestrator({required this.question, this.onNext, super.key});
 
@@ -54,38 +54,47 @@ class QuizOrchestrator extends StatelessWidget {
     return switch (QuizType.fromString(question.quizType)) {
       QuizType.pictureMatch => PictureMatchScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.listenTap => ListenTapScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.letterScramble => LetterScrambleScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.fillBlank => FillBlankScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.speakWord => SpeakWordScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.memoryFlip => MemoryFlipScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.sortBucket => SortBucketScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.wordPop => WordPopScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
       QuizType.storyBuilder => StoryBuilderScreen(
         questionId: question.id,
+        lessonId: question.lessonId,
         onNext: onNext,
       ),
     };

@@ -2,6 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/fill_blank_repository.dart';
 import '../../domain/models/fill_blank_state.dart';
 import '../../domain/usecases/fill_blank_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository providers ─────────────────────────────────────────────────
 
@@ -10,7 +14,7 @@ final fillBlankRepoProvider = Provider<IFillBlankRepository>(
 );
 
 final fillBlankAttemptRepoProvider = Provider<IFillBlankAttemptRepository>(
-  (_) => MockFillBlankAttemptRepository(),
+  (ref) => ref.watch(localFillBlankAttemptRepositoryProvider),
 );
 
 // ─── UseCase providers ────────────────────────────────────────────────────
@@ -26,17 +30,22 @@ final saveFillBlankProvider = Provider<SaveFillBlankResultUseCase>(
 // ─── Controller ───────────────────────────────────────────────────────────
 
 final fillBlankControllerProvider =
-    AsyncNotifierProviderFamily<FillBlankController, FillBlankState, String>(
-      FillBlankController.new,
-    );
+    AsyncNotifierProviderFamily<
+      FillBlankController,
+      FillBlankState,
+      QuizQuestionArgs
+    >(FillBlankController.new);
 
-class FillBlankController extends FamilyAsyncNotifier<FillBlankState, String> {
+class FillBlankController
+    extends FamilyAsyncNotifier<FillBlankState, QuizQuestionArgs> {
   late final Stopwatch _stopwatch;
 
   @override
-  Future<FillBlankState> build(String questionId) async {
+  Future<FillBlankState> build(QuizQuestionArgs args) async {
     _stopwatch = Stopwatch()..start();
-    final content = await ref.read(fetchFillBlankProvider).call(questionId);
+    final content = await ref
+        .read(fetchFillBlankProvider)
+        .call(args.questionId);
     return FillBlankState(content);
   }
 
@@ -110,17 +119,21 @@ class FillBlankController extends FamilyAsyncNotifier<FillBlankState, String> {
       ..reset()
       ..start();
     state = const AsyncLoading();
-    final content = await ref.read(fetchFillBlankProvider).call(arg);
+    final content = await ref.read(fetchFillBlankProvider).call(arg.questionId);
     state = AsyncData(FillBlankState(content));
   }
 
   // ─── Private helpers ──────────────────────────────────────────
 
   int _calcXp(FillBlankState gs) {
-    const baseXp = 10;
-    final noHintBonus = gs.hintsUsed == 0 ? 5 : 0;
-    final speedBonus = gs.timeTakenMs < 8000 ? 5 : 0;
-    return baseXp + noHintBonus + speedBonus;
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: true,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+        hintsUsed: gs.hintsUsed,
+      ),
+    );
   }
 
   Future<void> _saveResult(FillBlankState gs, bool isCorrect) async {
@@ -129,7 +142,8 @@ class FillBlankController extends FamilyAsyncNotifier<FillBlankState, String> {
         .call(
           FillBlankResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: isCorrect,
             selectedWord: gs.selectedWord ?? '',
             correctWord: gs.content.correctAnswer,

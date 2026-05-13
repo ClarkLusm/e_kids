@@ -14,8 +14,10 @@ class MemoryFlipPair extends Equatable {
     required this.cardB,
     this.audioOnMatch,
     this.difficultyWeight = 1,
-  }) : assert(difficultyWeight >= 1 && difficultyWeight <= 3,
-            'difficultyWeight phải từ 1–3');
+  }) : assert(
+         difficultyWeight >= 1 && difficultyWeight <= 3,
+         'difficultyWeight phải từ 1–3',
+       );
 
   factory MemoryFlipPair.fromJson(Map<String, dynamic> json) {
     return MemoryFlipPair(
@@ -28,14 +30,13 @@ class MemoryFlipPair extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'card_a': cardA.toJson(),
-        'card_b': cardB.toJson(),
-        if (audioOnMatch != null) 'audio_on_match': audioOnMatch,
-        'difficulty_weight': difficultyWeight,
-      };
+    'id': id,
+    'card_a': cardA.toJson(),
+    'card_b': cardB.toJson(),
+    if (audioOnMatch != null) 'audio_on_match': audioOnMatch,
+    'difficulty_weight': difficultyWeight,
+  };
 
   @override
-  List<Object?> get props =>
-      [id, cardA, cardB, audioOnMatch, difficultyWeight];
+  List<Object?> get props => [id, cardA, cardB, audioOnMatch, difficultyWeight];
 }

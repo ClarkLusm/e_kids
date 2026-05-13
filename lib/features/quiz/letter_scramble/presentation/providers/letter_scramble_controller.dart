@@ -4,6 +4,10 @@ import '../../data/letter_scramble_repository.dart';
 import '../../domain/models/letter_scramble_state.dart';
 import '../../domain/models/letter_tile.dart';
 import '../../domain/usecases/letter_scramble_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository providers ─────────────────────────────────────────────────
 
@@ -13,7 +17,7 @@ final letterScrambleRepoProvider = Provider<ILetterScrambleRepository>(
 
 final letterScrambleAttemptRepoProvider =
     Provider<ILetterScrambleAttemptRepository>(
-      (_) => MockLetterScrambleAttemptRepository(),
+      (ref) => ref.watch(localLetterScrambleAttemptRepositoryProvider),
     );
 
 // ─── UseCase providers ────────────────────────────────────────────────────
@@ -34,19 +38,19 @@ final letterScrambleControllerProvider =
     AsyncNotifierProviderFamily<
       LetterScrambleController,
       LetterScrambleState,
-      String
+      QuizQuestionArgs
     >(LetterScrambleController.new);
 
 class LetterScrambleController
-    extends FamilyAsyncNotifier<LetterScrambleState, String> {
+    extends FamilyAsyncNotifier<LetterScrambleState, QuizQuestionArgs> {
   late final Stopwatch _stopwatch;
 
   @override
-  Future<LetterScrambleState> build(String questionId) async {
+  Future<LetterScrambleState> build(QuizQuestionArgs args) async {
     _stopwatch = Stopwatch()..start();
     final content = await ref
         .read(fetchLetterScrambleProvider)
-        .call(questionId);
+        .call(args.questionId);
     return LetterScrambleState(content);
   }
 
@@ -270,7 +274,9 @@ class LetterScrambleController
       ..reset()
       ..start();
     state = const AsyncLoading();
-    final content = await ref.read(fetchLetterScrambleProvider).call(arg);
+    final content = await ref
+        .read(fetchLetterScrambleProvider)
+        .call(arg.questionId);
     state = AsyncData(LetterScrambleState(content));
   }
 
@@ -281,11 +287,15 @@ class LetterScrambleController
   // ─── Helpers ─────────────────────────────────────────────────────
 
   int _calcXp(LetterScrambleState gs) {
-    const base = 15;
-    final noHintBonus = gs.hintsUsed == 0 ? 5 : 0;
-    final noWrongBonus = gs.wrongAttempts == 0 ? 5 : 0;
-    final speedBonus = gs.timeTakenMs < 15000 ? 5 : 0;
-    return base + noHintBonus + noWrongBonus + speedBonus;
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: true,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+        hintsUsed: gs.hintsUsed,
+        attemptIndex: gs.wrongAttempts + 1,
+      ),
+    );
   }
 
   void _saveResult(LetterScrambleState gs) {
@@ -294,7 +304,8 @@ class LetterScrambleController
         .call(
           LetterScrambleResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: gs.status == LetterScrambleStatus.correct,
             submittedWord: gs.currentWord ?? '',
             correctWord: gs.content.word,

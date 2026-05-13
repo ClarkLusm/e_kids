@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../_shared/question_ref.dart';
 import '../../domain/models/word_pop_state.dart';
 import '../../presentation/providers/word_pop_controller.dart';
 import '../../presentation/widgets/bubble_widget.dart';
@@ -8,12 +9,14 @@ import '../../presentation/widgets/word_pop_hud_widget.dart';
 
 class WordPopScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const WordPopScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -27,13 +30,17 @@ class WordPopScreen extends ConsumerStatefulWidget {
 class _WordPopScreenState extends ConsumerState<WordPopScreen> {
   // Pop effects overlay
   final List<Widget> _popEffects = [];
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   WordPopController get _ctrl =>
-      ref.read(wordPopControllerProvider(widget.questionId).notifier);
+      ref.read(wordPopControllerProvider(_controllerArgs).notifier);
 
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(wordPopControllerProvider(widget.questionId));
+    final asyncState = ref.watch(wordPopControllerProvider(_controllerArgs));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0EEFF),
@@ -42,7 +49,7 @@ class _WordPopScreenState extends ConsumerState<WordPopScreen> {
         error: (e, _) => _ErrorView(
           error: e,
           onRetry: () =>
-              ref.invalidate(wordPopControllerProvider(widget.questionId)),
+              ref.invalidate(wordPopControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildGame(context, gs),
       ),
@@ -148,7 +155,7 @@ class _WordPopScreenState extends ConsumerState<WordPopScreen> {
                 onReplay: _ctrl.retry,
                 onContinue: () {
                   if (widget.onNext != null) {
-                    widget.onNext!();
+                    widget.onNext!(gs.xpEarned);
                   } else {
                     Navigator.of(context).pop();
                   }

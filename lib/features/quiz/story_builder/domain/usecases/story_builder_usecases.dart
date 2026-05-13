@@ -14,6 +14,7 @@ abstract class IStoryBuilderAttemptRepository {
 
 class StoryBuilderResult {
   final String childId;
+  final String lessonId;
   final String questionId;
   final bool isCorrect;
   final int correctSentences;
@@ -24,6 +25,7 @@ class StoryBuilderResult {
 
   const StoryBuilderResult({
     required this.childId,
+    required this.lessonId,
     required this.questionId,
     required this.isCorrect,
     required this.correctSentences,
@@ -35,6 +37,7 @@ class StoryBuilderResult {
 
   Map<String, dynamic> toJson() => {
     'child_id': childId,
+    'lesson_id': lessonId,
     'question_id': questionId,
     'is_correct': isCorrect,
     'time_taken_ms': timeTakenMs,

@@ -1,3 +1,5 @@
+export 'domain/models/quiz_xp_input.dart';
+export 'domain/usecases/calculate_quiz_xp_usecase.dart';
 export 'quiz_attempt_model.dart';
 export 'quiz_orchestrator.dart';
 export 'quiz_result_sheet.dart';

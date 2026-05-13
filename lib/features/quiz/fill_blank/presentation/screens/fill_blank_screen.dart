@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../_shared/hint_button_widget.dart';
+import '../../../_shared/question_ref.dart';
 import '../../../_shared/quiz_result_sheet.dart';
 import '../../../_shared/xp_animation_widget.dart';
 import '../../domain/models/fill_blank_state.dart';
@@ -13,12 +14,14 @@ import '../../presentation/widgets/fill_blank_feedback_widget.dart';
 
 class FillBlankScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const FillBlankScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -33,6 +36,10 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
     with SingleTickerProviderStateMixin {
   final GlobalKey _sentenceKey = GlobalKey();
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   // Confetti animation khi đúng
   late AnimationController _confettiCtrl;
@@ -54,10 +61,10 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
 
   @override
   Widget build(BuildContext context) {
-    final asyncState =
-        ref.watch(fillBlankControllerProvider(widget.questionId));
-    final ctrl = ref
-        .read(fillBlankControllerProvider(widget.questionId).notifier);
+    final asyncState = ref.watch(fillBlankControllerProvider(_controllerArgs));
+    final ctrl = ref.read(
+      fillBlankControllerProvider(_controllerArgs).notifier,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F7FF),
@@ -66,8 +73,8 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
         loading: () => const _LoadingView(),
         error: (e, _) => _ErrorView(
           error: e,
-          onRetry: () => ref.invalidate(
-              fillBlankControllerProvider(widget.questionId)),
+          onRetry: () =>
+              ref.invalidate(fillBlankControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildBody(context, gs, ctrl),
       ),
@@ -108,8 +115,10 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: IconButton(
-              icon: const Icon(Icons.volume_up_outlined,
-                  color: Color(0xFF534AB7)),
+              icon: const Icon(
+                Icons.volume_up_outlined,
+                color: Color(0xFF534AB7),
+              ),
               onPressed: ctrl.playSentenceAudio,
               tooltip: 'Nghe câu',
             ),
@@ -173,8 +182,8 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
                 gs.hasSelection && !gs.isAnswered
                     ? 'Nhấn "Kiểm tra" khi sẵn sàng'
                     : gs.isAnswered
-                        ? ''
-                        : 'Chọn một từ bên dưới',
+                    ? ''
+                    : 'Chọn một từ bên dưới',
                 key: ValueKey(gs.status),
                 style: TextStyle(
                   fontSize: 13,
@@ -202,7 +211,7 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
               onSubmit: () async {
                 await ctrl.submitAnswer();
                 final updatedGs = ref
-                    .read(fillBlankControllerProvider(widget.questionId))
+                    .read(fillBlankControllerProvider(_controllerArgs))
                     .value;
                 if (updatedGs != null && updatedGs.isCorrect) {
                   _playCorrectAnimation(context, updatedGs.xpEarned);
@@ -220,8 +229,7 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
   // ─── XP animation + confetti ──────────────────────────────────────
 
   void _playCorrectAnimation(BuildContext context, int xp) {
-    final box = _sentenceKey.currentContext?.findRenderObject()
-        as RenderBox?;
+    final box = _sentenceKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
     final center = box.localToGlobal(
       Offset(box.size.width / 2, box.size.height / 2),
@@ -238,7 +246,7 @@ class _FillBlankScreenState extends ConsumerState<FillBlankScreen>
     FillBlankController ctrl,
   ) {
     if (widget.onNext != null) {
-      widget.onNext!();
+      widget.onNext!(gs.xpEarned);
       return;
     }
 
@@ -296,7 +304,8 @@ class _ProgressBar extends StatelessWidget {
               minHeight: 6,
               backgroundColor: Colors.grey.shade200,
               valueColor: const AlwaysStoppedAnimation<Color>(
-                  Color(0xFF534AB7)),
+                Color(0xFF534AB7),
+              ),
             ),
           ),
         ),
@@ -304,9 +313,10 @@ class _ProgressBar extends StatelessWidget {
         Text(
           '$current/$total',
           style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-              fontWeight: FontWeight.w500),
+            fontSize: 12,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ],
     );
@@ -326,8 +336,7 @@ class _LoadingView extends StatelessWidget {
         children: [
           CircularProgressIndicator(color: Color(0xFF534AB7)),
           SizedBox(height: 16),
-          Text('Đang tải câu hỏi...',
-              style: TextStyle(color: Colors.grey)),
+          Text('Đang tải câu hỏi...', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
@@ -349,24 +358,30 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: Color(0xFFE24B4A)),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: Color(0xFFE24B4A),
+            ),
             const SizedBox(height: 12),
-            const Text('Không tải được câu hỏi',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w600)),
+            const Text(
+              'Không tải được câu hỏi',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: 8),
-            Text(error.toString(),
-                style: const TextStyle(
-                    fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center),
+            Text(
+              error.toString(),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 20),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Thử lại'),
               style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF534AB7)),
+                backgroundColor: const Color(0xFF534AB7),
+              ),
             ),
           ],
         ),

@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/database/daos/lesson_progress_dao.dart';
+import '../../../../core/database/database_providers.dart';
+import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../data/local/local_lesson_progress_repository.dart';
 import '../../data/lesson_repository.dart';
 import '../../domain/models/lesson_models.dart';
 import '../../../quiz/_shared/question_ref.dart';
@@ -24,8 +28,22 @@ final questionRefRepoProvider = Provider<IQuestionRefRepository>(
 );
 
 final lessonProgressRepoProvider = Provider<ILessonProgressRepository>(
-  (_) => MockLessonProgressRepository(),
+  (ref) => ref.watch(localLessonProgressRepositoryProvider),
 );
+
+final lessonProgressDaoProvider = Provider<LessonProgressDao>(
+  (ref) => LessonProgressDao(ref.watch(appDatabaseProvider)),
+);
+
+final localLessonProgressRepositoryProvider =
+    Provider<LocalLessonProgressRepository>(
+      (ref) =>
+          LocalLessonProgressRepository(ref.watch(lessonProgressDaoProvider)),
+    );
+
+final currentChildIdProvider = Provider<String>((ref) {
+  return ref.watch(authStateProvider).valueOrNull?.id ?? 'mock_child_id';
+});
 
 // ─── UseCase providers ────────────────────────────────────────────────────
 
@@ -84,7 +102,8 @@ final lessonProgressMapProvider =
       ref,
       topicId,
     ) async {
-      return ref.read(fetchProgressProvider).call(topicId, 'mock_child_id');
+      final childId = ref.watch(currentChildIdProvider);
+      return ref.read(fetchProgressProvider).call(topicId, childId);
     });
 
 // ─── Quiz Runner Controller ───────────────────────────────────────────────
@@ -178,6 +197,8 @@ class QuizRunnerNotifier
       totalXpEarned: totalXp,
     );
 
-    ref.read(updateProgressProvider).call('mock_child_id', progress);
+    ref
+        .read(updateProgressProvider)
+        .call(ref.read(currentChildIdProvider), progress);
   }
 }

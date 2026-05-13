@@ -20,6 +20,7 @@ class FetchPictureMatchUseCase {
 
 class PictureMatchResult {
   final String childId;
+  final String lessonId;
   final String questionId;
   final String? sessionId;
   final bool isCorrect;
@@ -30,6 +31,7 @@ class PictureMatchResult {
 
   const PictureMatchResult({
     required this.childId,
+    required this.lessonId,
     required this.questionId,
     this.sessionId,
     required this.isCorrect,
@@ -41,6 +43,7 @@ class PictureMatchResult {
 
   Map<String, dynamic> toJson() => {
     'child_id': childId,
+    'lesson_id': lessonId,
     'question_id': questionId,
     if (sessionId != null) 'session_id': sessionId,
     'is_correct': isCorrect,

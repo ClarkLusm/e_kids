@@ -5,6 +5,10 @@ import '../../domain/models/card_content.dart';
 import '../../domain/models/memory_flip_game_state.dart';
 import '../../domain/usecases/fetch_memory_flip_usecase.dart';
 import '../../domain/usecases/save_memory_flip_result_usecase.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository Providers ─────────────────────────────────────────────────
 
@@ -13,36 +17,37 @@ final memoryFlipRepoProvider = Provider<IMemoryFlipRepository>(
 );
 
 final quizAttemptRepoProvider = Provider<IQuizAttemptRepository>(
-  (_) => MockQuizAttemptRepository(),
+  (ref) => ref.watch(localMemoryFlipAttemptRepositoryProvider),
 );
 
 // ─── UseCase Providers ────────────────────────────────────────────────────
 
-final fetchMemoryFlipUseCaseProvider =
-    Provider<FetchMemoryFlipUseCase>((ref) {
+final fetchMemoryFlipUseCaseProvider = Provider<FetchMemoryFlipUseCase>((ref) {
   return FetchMemoryFlipUseCase(ref.read(memoryFlipRepoProvider));
 });
 
 final saveMemoryFlipResultUseCaseProvider =
     Provider<SaveMemoryFlipResultUseCase>((ref) {
-  return SaveMemoryFlipResultUseCase(ref.read(quizAttemptRepoProvider));
-});
+      return SaveMemoryFlipResultUseCase(ref.read(quizAttemptRepoProvider));
+    });
 
 // ─── Controller ───────────────────────────────────────────────────────────
 
 /// Riverpod family: mỗi questionId có 1 instance controller riêng
-final memoryFlipControllerProvider = AsyncNotifierProviderFamily<
-    MemoryFlipController, MemoryFlipGameState, String>(
-  MemoryFlipController.new,
-);
+final memoryFlipControllerProvider =
+    AsyncNotifierProviderFamily<
+      MemoryFlipController,
+      MemoryFlipGameState,
+      QuizQuestionArgs
+    >(MemoryFlipController.new);
 
 class MemoryFlipController
-    extends FamilyAsyncNotifier<MemoryFlipGameState, String> {
+    extends FamilyAsyncNotifier<MemoryFlipGameState, QuizQuestionArgs> {
   bool _isProcessing = false;
 
   @override
-  Future<MemoryFlipGameState> build(String questionId) async {
-    return _initGame(questionId);
+  Future<MemoryFlipGameState> build(QuizQuestionArgs args) async {
+    return _initGame(args.questionId);
   }
 
   // ─── Init ─────────────────────────────────────────────────
@@ -58,8 +63,7 @@ class MemoryFlipController
         card.faceState = CardFaceState.faceUp;
       }
       state = AsyncData(gs);
-      await Future.delayed(
-          Duration(milliseconds: content.previewDurationMs));
+      await Future.delayed(Duration(milliseconds: content.previewDurationMs));
       for (final card in gs.board) {
         card.faceState = CardFaceState.faceDown;
       }
@@ -155,8 +159,7 @@ class MemoryFlipController
     state = AsyncData(gs);
 
     // Đợi mismatch_hide_ms rồi úp lại
-    await Future.delayed(
-        Duration(milliseconds: gs.content.mismatchHideMs));
+    await Future.delayed(Duration(milliseconds: gs.content.mismatchHideMs));
 
     a.faceState = CardFaceState.faceDown;
     b.faceState = CardFaceState.faceDown;
@@ -165,20 +168,23 @@ class MemoryFlipController
 
   Future<void> _finishGame(MemoryFlipGameState gs) async {
     gs.stopTimer();
-    gs.earnedXp = gs.computeFinalXp();
+    gs.earnedXp = _calcXp(gs);
     state = AsyncData(gs);
 
     // Lưu kết quả lên DB
     final saveUseCase = ref.read(saveMemoryFlipResultUseCaseProvider);
-    await saveUseCase.call(MemoryFlipResult(
-      childId: 'mock_child_id', // thay bằng currentChildProvider sau
-      questionId: arg,
-      flipCount: gs.flipCount,
-      elapsedSec: gs.elapsedSec,
-      xpEarned: gs.earnedXp,
-      stars: gs.computeStars(),
-      isComplete: gs.isComplete,
-    ));
+    await saveUseCase.call(
+      MemoryFlipResult(
+        childId: 'mock_child_id', // thay bằng currentChildProvider sau
+        lessonId: arg.lessonId,
+        questionId: arg.questionId,
+        flipCount: gs.flipCount,
+        elapsedSec: gs.elapsedSec,
+        xpEarned: gs.earnedXp,
+        stars: gs.computeStars(),
+        isComplete: gs.isComplete,
+      ),
+    );
   }
 
   // ─── Replay ───────────────────────────────────────────────
@@ -186,7 +192,7 @@ class MemoryFlipController
   Future<void> replay() async {
     _isProcessing = false;
     state = const AsyncLoading();
-    state = AsyncData(await _initGame(arg));
+    state = AsyncData(await _initGame(arg.questionId));
   }
 
   // ─── Helpers ──────────────────────────────────────────────
@@ -195,5 +201,15 @@ class MemoryFlipController
     if (url == null) return;
     // TODO: inject AudioService và gọi play(url)
     // ref.read(audioServiceProvider).play(url);
+  }
+
+  int _calcXp(MemoryFlipGameState gs) {
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: gs.isComplete,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.elapsedSec * 1000,
+      ),
+    );
   }
 }

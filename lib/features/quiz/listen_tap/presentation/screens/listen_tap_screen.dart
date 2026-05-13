@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../_shared/question_ref.dart';
 import '../../../_shared/quiz_result_sheet.dart';
 import '../../../_shared/xp_animation_widget.dart';
 import '../../domain/models/listen_tap_state.dart';
@@ -11,12 +12,14 @@ import '../../presentation/widgets/listen_tap_feedback_widget.dart';
 
 class ListenTapScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const ListenTapScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -30,15 +33,17 @@ class ListenTapScreen extends ConsumerStatefulWidget {
 class _ListenTapScreenState extends ConsumerState<ListenTapScreen> {
   final GlobalKey _gridKey = GlobalKey();
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   ListenTapController get _ctrl =>
-      ref.read(listenTapControllerProvider(widget.questionId).notifier);
+      ref.read(listenTapControllerProvider(_controllerArgs).notifier);
 
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(
-      listenTapControllerProvider(widget.questionId),
-    );
+    final asyncState = ref.watch(listenTapControllerProvider(_controllerArgs));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F7FF),
@@ -48,7 +53,7 @@ class _ListenTapScreenState extends ConsumerState<ListenTapScreen> {
         error: (e, _) => _ErrorView(
           error: e,
           onRetry: () =>
-              ref.invalidate(listenTapControllerProvider(widget.questionId)),
+              ref.invalidate(listenTapControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildBody(context, gs),
       ),
@@ -100,7 +105,7 @@ class _ListenTapScreenState extends ConsumerState<ListenTapScreen> {
                 onChoiceTap: (word) async {
                   await _ctrl.selectAnswer(word);
                   final updated = ref
-                      .read(listenTapControllerProvider(widget.questionId))
+                      .read(listenTapControllerProvider(_controllerArgs))
                       .value;
                   if (updated != null && updated.isCorrect) {
                     _showXpAnimation(context, updated.xpEarned);
@@ -138,7 +143,7 @@ class _ListenTapScreenState extends ConsumerState<ListenTapScreen> {
 
   void _handleContinue(BuildContext context, ListenTapState gs) {
     if (widget.onNext != null) {
-      widget.onNext!();
+      widget.onNext!(gs.xpEarned);
       return;
     }
 

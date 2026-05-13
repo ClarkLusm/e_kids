@@ -4,6 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/word_pop_repository.dart';
 import '../../domain/models/word_pop_state.dart';
 import '../../domain/usecases/word_pop_usecases.dart';
+import '../../../_shared/data/local/local_quiz_attempt_repository.dart';
+import '../../../_shared/domain/models/quiz_xp_input.dart';
+import '../../../_shared/domain/usecases/calculate_quiz_xp_usecase.dart';
+import '../../../_shared/question_ref.dart';
 
 // ─── Repository providers ─────────────────────────────────────────────────
 
@@ -12,7 +16,7 @@ final wordPopRepoProvider = Provider<IWordPopRepository>(
 );
 
 final wordPopAttemptRepoProvider = Provider<IWordPopAttemptRepository>(
-  (_) => MockWordPopAttemptRepository(),
+  (ref) => ref.watch(localWordPopAttemptRepositoryProvider),
 );
 
 // ─── UseCase providers ────────────────────────────────────────────────────
@@ -28,18 +32,21 @@ final saveWordPopProvider = Provider<SaveWordPopResultUseCase>(
 // ─── Controller ───────────────────────────────────────────────────────────
 
 final wordPopControllerProvider =
-    AsyncNotifierProviderFamily<WordPopController, WordPopState, String>(
-      WordPopController.new,
-    );
+    AsyncNotifierProviderFamily<
+      WordPopController,
+      WordPopState,
+      QuizQuestionArgs
+    >(WordPopController.new);
 
-class WordPopController extends FamilyAsyncNotifier<WordPopState, String> {
+class WordPopController
+    extends FamilyAsyncNotifier<WordPopState, QuizQuestionArgs> {
   Timer? _countdownTimer;
   Timer? _spawnTimer;
   Timer? _gameTimer;
   final Stopwatch _stopwatch = Stopwatch();
 
   @override
-  Future<WordPopState> build(String questionId) async {
+  Future<WordPopState> build(QuizQuestionArgs args) async {
     // Huỷ timers khi dispose
     ref.onDispose(() {
       _countdownTimer?.cancel();
@@ -48,7 +55,7 @@ class WordPopController extends FamilyAsyncNotifier<WordPopState, String> {
       _stopwatch.stop();
     });
 
-    final content = await ref.read(fetchWordPopProvider).call(questionId);
+    final content = await ref.read(fetchWordPopProvider).call(args.questionId);
     final gs = WordPopState(content);
 
     // Bắt đầu đếm ngược
@@ -155,7 +162,7 @@ class WordPopController extends FamilyAsyncNotifier<WordPopState, String> {
       ..stop();
 
     state = const AsyncLoading();
-    final content = await ref.read(fetchWordPopProvider).call(arg);
+    final content = await ref.read(fetchWordPopProvider).call(arg.questionId);
     final gs = WordPopState(content);
     _startCountdown(gs);
     state = AsyncData(gs);
@@ -164,13 +171,14 @@ class WordPopController extends FamilyAsyncNotifier<WordPopState, String> {
   // ─── Helpers ─────────────────────────────────────────────────────
 
   int _calcXp(WordPopState gs) {
-    // Cơ bản: 10 XP mỗi target hit
-    var xp = gs.targetsHit * 10;
-    // Bonus: không bỏ sót target nào
-    if (gs.missedTargets == 0) xp += 15;
-    // Bonus: không chạm nhầm
-    if (gs.wrongTaps == 0) xp += 10;
-    return xp;
+    return const CalculateQuizXpUseCase()(
+      QuizXpInput(
+        isCorrect: gs.targetsHit == gs.totalTargets,
+        // TODO(db): lấy difficulty từ quiz_questions khi nối Drift.
+        timeTakenMs: gs.timeTakenMs,
+        attemptIndex: gs.wrongTaps + 1,
+      ),
+    );
   }
 
   void _saveResult(WordPopState gs) {
@@ -179,7 +187,8 @@ class WordPopController extends FamilyAsyncNotifier<WordPopState, String> {
         .call(
           WordPopResult(
             childId: 'mock_child_id',
-            questionId: arg,
+            lessonId: arg.lessonId,
+            questionId: arg.questionId,
             isCorrect: gs.targetsHit == gs.totalTargets,
             score: gs.score,
             targetsHit: gs.targetsHit,

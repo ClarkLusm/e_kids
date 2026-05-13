@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/models/lesson_models.dart';
 import '../../../quiz/_shared/quiz_orchestrator.dart';
 import '../../../quiz/_shared/question_ref.dart';
 import '../providers/lesson_providers.dart';
@@ -14,8 +15,7 @@ class QuizRunnerScreen extends ConsumerStatefulWidget {
   const QuizRunnerScreen({required this.lessonId, super.key});
 
   @override
-  ConsumerState<QuizRunnerScreen> createState() =>
-      _QuizRunnerScreenState();
+  ConsumerState<QuizRunnerScreen> createState() => _QuizRunnerScreenState();
 }
 
 class _QuizRunnerScreenState extends ConsumerState<QuizRunnerScreen> {
@@ -30,12 +30,10 @@ class _QuizRunnerScreenState extends ConsumerState<QuizRunnerScreen> {
       loading: () => const Scaffold(
         backgroundColor: Color(0xFFF8F7FF),
         body: Center(
-            child:
-                CircularProgressIndicator(color: Color(0xFF534AB7))),
+          child: CircularProgressIndicator(color: Color(0xFF534AB7)),
+        ),
       ),
-      error: (e, _) => Scaffold(
-        body: Center(child: Text('Lỗi: $e')),
-      ),
+      error: (e, _) => Scaffold(body: Center(child: Text('Lỗi: $e'))),
       data: (detail) {
         if (!_questionsLoaded) {
           _questions = detail.questions;
@@ -43,8 +41,7 @@ class _QuizRunnerScreenState extends ConsumerState<QuizRunnerScreen> {
         }
 
         if (_questions.isEmpty) {
-          return _NoQuestionsView(
-              onBack: () => Navigator.of(context).pop());
+          return _NoQuestionsView(onBack: () => Navigator.of(context).pop());
         }
 
         return _RunnerContent(
@@ -71,8 +68,7 @@ class _RunnerContent extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<_RunnerContent> createState() =>
-      _RunnerContentState();
+  ConsumerState<_RunnerContent> createState() => _RunnerContentState();
 }
 
 class _RunnerContentState extends ConsumerState<_RunnerContent> {
@@ -82,27 +78,63 @@ class _RunnerContentState extends ConsumerState<_RunnerContent> {
 
   QuestionRef get _currentQ => widget.questions[_currentIndex];
   int get _total => widget.questions.length;
-  bool get _isLast => _currentIndex == _total - 1;
 
   void _onQuizNext({int earnedXp = 0}) {
+    final completedQuestions = _currentIndex + 1;
+    final isDone = completedQuestions >= _total;
+
     setState(() => _totalEarnedXp += earnedXp);
 
-    if (_isLast) {
-      _finishLesson();
+    _saveLessonProgress(completedQuestions: completedQuestions, isDone: isDone);
+
+    if (isDone) {
+      setState(() => _showComplete = true);
     } else {
       setState(() => _currentIndex++);
     }
   }
 
-  void _finishLesson() {
-    // Cập nhật progress
-    ref.read(quizRunnerProvider(widget.questions).notifier)
-        .onQuizCompleted(
-          questionId: _currentQ.id,
-          xpEarned: _totalEarnedXp,
-        );
+  Future<void> _saveLessonProgress({
+    required int completedQuestions,
+    required bool isDone,
+  }) async {
+    final childId = ref.read(currentChildIdProvider);
+    final repo = ref.read(localLessonProgressRepositoryProvider);
+    final existing = await repo.fetchProgress(widget.lessonId, childId);
+    final totalXp = _totalEarnedXp;
+    final maxXp = widget.questions.fold(0, (sum, q) => sum + q.xpReward);
+    final score = maxXp == 0
+        ? 0
+        : (totalXp / maxXp * 100).round().clamp(0, 100);
+    final stars = isDone
+        ? score >= 100
+              ? 3
+              : score >= 80
+              ? 2
+              : 1
+        : existing?.stars ?? 0;
 
-    setState(() => _showComplete = true);
+    await repo.upsertLessonCompletion(
+      childId: childId,
+      progress: LessonProgress(
+        lessonId: widget.lessonId,
+        status: isDone ? LessonStatus.completed : LessonStatus.inProgress,
+        stars: stars,
+        bestScore: score > (existing?.bestScore ?? 0)
+            ? score
+            : existing?.bestScore ?? 0,
+        attempts: isDone
+            ? (existing?.attempts ?? 0) + 1
+            : existing?.attempts ?? 0,
+        totalXpEarned: totalXp,
+      ),
+      completedQuestions: completedQuestions,
+      totalQuestions: _total,
+      lastQuestionId: _currentQ.id,
+    );
+
+    if (!mounted) return;
+    ref.invalidate(lessonProgressMapProvider);
   }
 
   @override
@@ -133,25 +165,30 @@ class _RunnerContentState extends ConsumerState<_RunnerContent> {
           SafeArea(
             bottom: false,
             child: Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: Column(children: [
-                // Close + progress bar
-                Row(children: [
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded,
-                        color: Colors.grey),
-                    onPressed: () => _showExitDialog(context),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Column(
+                children: [
+                  // Close + progress bar
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () => _showExitDialog(context),
+                      ),
+                      Expanded(
+                        child: QuizRunnerProgressBar(
+                          current: _currentIndex,
+                          total: _total,
+                          earnedXp: _totalEarnedXp,
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: QuizRunnerProgressBar(
-                      current: _currentIndex,
-                      total: _total,
-                      earnedXp: _totalEarnedXp,
-                    ),
-                  ),
-                ]),
-              ]),
+                ],
+              ),
             ),
           ),
 
@@ -176,11 +213,11 @@ class _RunnerContentState extends ConsumerState<_RunnerContent> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Thoát bài học?'),
         content: const Text(
-            'Tiến độ hiện tại sẽ không được lưu nếu bạn thoát giữa chừng.'),
+          'Tiến độ hiện tại sẽ không được lưu nếu bạn thoát giữa chừng.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -192,7 +229,8 @@ class _RunnerContentState extends ConsumerState<_RunnerContent> {
               Navigator.of(context).pop();
             },
             style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFE24B4A)),
+              backgroundColor: const Color(0xFFE24B4A),
+            ),
             child: const Text('Thoát'),
           ),
         ],
@@ -225,7 +263,7 @@ class QuizOrchestratorWithCallback extends StatelessWidget {
         quizType: question.quizType,
         lessonId: lessonId,
       ),
-      // onNext: () => onNext(question.estimatedXp),
+      onNext: onNext,
     );
   }
 }
@@ -237,15 +275,15 @@ class QuestionOrcRef {
   const QuestionOrcRef({required this.id, required this.quizType});
 
   int get estimatedXp => switch (quizType) {
-        'memory_flip'    => 20,
-        'speak_word'     => 25,
-        'sort_bucket'    => 20,
-        'story_builder'  => 20,
-        'word_pop'       => 15,
-        'letter_scramble' => 15,
-        'fill_blank'     => 15,
-        _                => 10,
-      };
+    'memory_flip' => 20,
+    'speak_word' => 25,
+    'sort_bucket' => 20,
+    'story_builder' => 20,
+    'word_pop' => 15,
+    'letter_scramble' => 15,
+    'fill_blank' => 15,
+    _ => 10,
+  };
 }
 
 // ─── Lesson complete screen ───────────────────────────────────────────────
@@ -266,8 +304,7 @@ class _LessonCompleteScreen extends StatefulWidget {
   });
 
   @override
-  State<_LessonCompleteScreen> createState() =>
-      _LessonCompleteScreenState();
+  State<_LessonCompleteScreen> createState() => _LessonCompleteScreenState();
 }
 
 class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
@@ -285,15 +322,11 @@ class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
     )..forward();
 
     _scaleAnim = TweenSequence([
-      TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: 1.15), weight: 5),
-      TweenSequenceItem(
-          tween: Tween(begin: 1.15, end: 1.0), weight: 5),
-    ]).animate(
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.15), weight: 5),
+      TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 5),
+    ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
 
-    _fadeAnim =
-        CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
+    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
   }
 
   @override
@@ -325,16 +358,14 @@ class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              const Color(0xFFEF9F27).withOpacity(0.4),
+                          color: const Color(0xFFEF9F27).withOpacity(0.4),
                           blurRadius: 30,
                           offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     alignment: Alignment.center,
-                    child: const Text('🏆',
-                        style: TextStyle(fontSize: 52)),
+                    child: const Text('🏆', style: TextStyle(fontSize: 52)),
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -350,10 +381,7 @@ class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
                 const SizedBox(height: 8),
                 Text(
                   widget.lessonTitle,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
+                  style: const TextStyle(fontSize: 16, color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 36),
@@ -373,9 +401,7 @@ class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
                         value: '+${widget.totalXp}',
                         label: 'XP kiếm được',
                       ),
-                      Container(
-                          width: 1, height: 48,
-                          color: Colors.white24),
+                      Container(width: 1, height: 48, color: Colors.white24),
                       _StatItem(
                         emoji: '✅',
                         value: '${widget.questionCount}',
@@ -395,14 +421,17 @@ class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
                     label: const Text(
                       'Về trang chủ',
                       style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF534AB7),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -416,11 +445,11 @@ class _LessonCompleteScreenState extends State<_LessonCompleteScreen>
                     label: const Text('Làm lại bài học'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(
-                          color: Colors.white54, width: 1.5),
+                      side: const BorderSide(color: Colors.white54, width: 1.5),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -438,26 +467,33 @@ class _StatItem extends StatelessWidget {
   final String value;
   final String label;
 
-  const _StatItem(
-      {required this.emoji,
-      required this.value,
-      required this.label});
+  const _StatItem({
+    required this.emoji,
+    required this.value,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      Text(emoji, style: const TextStyle(fontSize: 24)),
-      const SizedBox(height: 4),
-      Text(value,
+    return Column(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 24)),
+        const SizedBox(height: 4),
+        Text(
+          value,
           style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: Colors.white)),
-      const SizedBox(height: 2),
-      Text(label,
-          style: const TextStyle(
-              fontSize: 11, color: Colors.white60)),
-    ]);
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.white60),
+        ),
+      ],
+    );
   }
 }
 
@@ -467,20 +503,23 @@ class _NoQuestionsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.quiz_outlined,
-                size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
-            const Text('Bài học chưa có câu hỏi.'),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: onBack,
-              style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF534AB7)),
-              child: const Text('Quay lại'),
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.quiz_outlined, size: 48, color: Colors.grey),
+          const SizedBox(height: 12),
+          const Text('Bài học chưa có câu hỏi.'),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: onBack,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF534AB7),
             ),
-          ]),
-        ),
-      );
+            child: const Text('Quay lại'),
+          ),
+        ],
+      ),
+    ),
+  );
 }

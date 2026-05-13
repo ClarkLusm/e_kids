@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../_shared/question_ref.dart';
 import '../../../_shared/xp_animation_widget.dart';
 import '../../domain/models/sort_bucket_state.dart';
 import '../../presentation/providers/sort_bucket_controller.dart';
@@ -10,12 +11,14 @@ import '../../presentation/widgets/sort_bucket_result_sheet.dart';
 
 class SortBucketScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const SortBucketScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -29,15 +32,17 @@ class SortBucketScreen extends ConsumerStatefulWidget {
 class _SortBucketScreenState extends ConsumerState<SortBucketScreen> {
   final GlobalKey _bucketsKey = GlobalKey();
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   SortBucketController get _ctrl =>
-      ref.read(sortBucketControllerProvider(widget.questionId).notifier);
+      ref.read(sortBucketControllerProvider(_controllerArgs).notifier);
 
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(
-      sortBucketControllerProvider(widget.questionId),
-    );
+    final asyncState = ref.watch(sortBucketControllerProvider(_controllerArgs));
 
     // Hiện result sheet ngay khi isComplete
     asyncState.whenData((gs) {
@@ -56,7 +61,7 @@ class _SortBucketScreenState extends ConsumerState<SortBucketScreen> {
         error: (e, _) => _ErrorView(
           error: e,
           onRetry: () =>
-              ref.invalidate(sortBucketControllerProvider(widget.questionId)),
+              ref.invalidate(sortBucketControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildBody(context, gs),
       ),
@@ -216,7 +221,7 @@ class _SortBucketScreenState extends ConsumerState<SortBucketScreen> {
         onNext: () {
           Navigator.of(context).pop();
           if (widget.onNext != null) {
-            widget.onNext!();
+            widget.onNext!(gs.xpEarned);
           } else {
             Navigator.of(context).pop();
           }

@@ -1,6 +1,7 @@
 /// DTO gửi lên DB sau khi hoàn thành ván
 class MemoryFlipResult {
   final String childId;
+  final String lessonId;
   final String questionId;
   final String? sessionId;
   final int flipCount;
@@ -11,6 +12,7 @@ class MemoryFlipResult {
 
   const MemoryFlipResult({
     required this.childId,
+    required this.lessonId,
     required this.questionId,
     this.sessionId,
     required this.flipCount,
@@ -22,6 +24,7 @@ class MemoryFlipResult {
 
   Map<String, dynamic> toJson() => {
     'child_id': childId,
+    'lesson_id': lessonId,
     'question_id': questionId,
     if (sessionId != null) 'session_id': sessionId,
     'is_correct': isComplete,

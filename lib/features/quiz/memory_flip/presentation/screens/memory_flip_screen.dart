@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../_shared/question_ref.dart';
 import '../providers/memory_flip_controller.dart';
 import '../widgets/flip_card_widget.dart';
 import '../widgets/game_header_widget.dart';
@@ -7,10 +8,12 @@ import '../widgets/result_sheet_widget.dart';
 
 class MemoryFlipScreen extends ConsumerStatefulWidget {
   final String questionId;
-  final VoidCallback? onNext;
+  final String lessonId;
+  final ValueChanged<int>? onNext;
 
   const MemoryFlipScreen({
     required this.questionId,
+    required this.lessonId,
     required this.onNext,
     super.key,
   });
@@ -21,14 +24,16 @@ class MemoryFlipScreen extends ConsumerStatefulWidget {
 
 class _MemoryFlipScreenState extends ConsumerState<MemoryFlipScreen> {
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(
-      memoryFlipControllerProvider(widget.questionId),
-    );
+    final asyncState = ref.watch(memoryFlipControllerProvider(_controllerArgs));
     final ctrl = ref.read(
-      memoryFlipControllerProvider(widget.questionId).notifier,
+      memoryFlipControllerProvider(_controllerArgs).notifier,
     );
 
     return Scaffold(
@@ -55,7 +60,7 @@ class _MemoryFlipScreenState extends ConsumerState<MemoryFlipScreen> {
         error: (e, st) => _ErrorView(
           error: e,
           onRetry: () {
-            ref.invalidate(memoryFlipControllerProvider(widget.questionId));
+            ref.invalidate(memoryFlipControllerProvider(_controllerArgs));
           },
         ),
         data: (gs) {
@@ -151,7 +156,11 @@ class _MemoryFlipScreenState extends ConsumerState<MemoryFlipScreen> {
         },
         onNext: () {
           Navigator.of(context).pop(); // đóng sheet
-          Navigator.of(context).pop(); // quay lại lesson
+          if (widget.onNext != null) {
+            widget.onNext!(gs.earnedXp);
+          } else {
+            Navigator.of(context).pop(); // quay lại lesson
+          }
         },
       ),
     );

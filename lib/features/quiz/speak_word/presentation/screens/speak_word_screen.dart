@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../_shared/question_ref.dart';
 import '../../../_shared/quiz_result_sheet.dart';
 import '../../../_shared/xp_animation_widget.dart';
 import '../../domain/models/speak_word_state.dart';
@@ -11,12 +12,14 @@ import '../../presentation/widgets/speak_word_feedback_widget.dart';
 
 class SpeakWordScreen extends ConsumerStatefulWidget {
   final String questionId;
+  final String lessonId;
   final int totalQuestions;
   final int currentIndex;
-  final VoidCallback? onNext;
+  final ValueChanged<int>? onNext;
 
   const SpeakWordScreen({
     required this.questionId,
+    required this.lessonId,
     this.totalQuestions = 1,
     this.currentIndex = 1,
     this.onNext,
@@ -30,15 +33,17 @@ class SpeakWordScreen extends ConsumerStatefulWidget {
 class _SpeakWordScreenState extends ConsumerState<SpeakWordScreen> {
   final GlobalKey _cardKey = GlobalKey();
   bool _resultShown = false;
+  QuizQuestionArgs get _controllerArgs => QuizQuestionArgs(
+    questionId: widget.questionId,
+    lessonId: widget.lessonId,
+  );
 
   SpeakWordController get _ctrl =>
-      ref.read(speakWordControllerProvider(widget.questionId).notifier);
+      ref.read(speakWordControllerProvider(_controllerArgs).notifier);
 
   @override
   Widget build(BuildContext context) {
-    final asyncState = ref.watch(
-      speakWordControllerProvider(widget.questionId),
-    );
+    final asyncState = ref.watch(speakWordControllerProvider(_controllerArgs));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F7FF),
@@ -48,7 +53,7 @@ class _SpeakWordScreenState extends ConsumerState<SpeakWordScreen> {
         error: (e, _) => _ErrorView(
           error: e,
           onRetry: () =>
-              ref.invalidate(speakWordControllerProvider(widget.questionId)),
+              ref.invalidate(speakWordControllerProvider(_controllerArgs)),
         ),
         data: (gs) => _buildBody(context, gs),
       ),
@@ -143,7 +148,7 @@ class _SpeakWordScreenState extends ConsumerState<SpeakWordScreen> {
     }
 
     if (widget.onNext != null) {
-      widget.onNext!();
+      widget.onNext!(gs.xpEarned);
       return;
     }
 

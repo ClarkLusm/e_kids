@@ -14,6 +14,7 @@ abstract class IWordPopAttemptRepository {
 
 class WordPopResult {
   final String childId;
+  final String lessonId;
   final String questionId;
   final bool isCorrect;
   final int score;
@@ -26,6 +27,7 @@ class WordPopResult {
 
   const WordPopResult({
     required this.childId,
+    required this.lessonId,
     required this.questionId,
     required this.isCorrect,
     required this.score,
@@ -39,6 +41,7 @@ class WordPopResult {
 
   Map<String, dynamic> toJson() => {
     'child_id': childId,
+    'lesson_id': lessonId,
     'question_id': questionId,
     'is_correct': isCorrect,
     'time_taken_ms': timeTakenMs,
