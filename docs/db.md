@@ -67,7 +67,32 @@ Ghi chú:
 
 ## Nội Dung Học
 
-Lưu ý: dữ liệu lesson và quiz có thể đến từ seed local ở phase đầu, sau đó được đồng bộ từ API khi backend sẵn sàng. Vì vậy các bảng nội dung như `topics`, `lessons`, `quiz_questions`, `vocabulary_items` nên giữ id ổn định, có version nội dung và tránh phụ thuộc vào id tự tăng local.
+Lưu ý: dữ liệu path, topic, lesson và quiz có thể đến từ seed local ở phase đầu, sau đó được đồng bộ từ API khi backend sẵn sàng. Vì vậy các bảng nội dung như `learning_paths`, `topics`, `lessons`, `quiz_questions`, `vocabulary_items` nên giữ id ổn định và tránh phụ thuộc vào id tự tăng local.
+
+Flow nội dung chính:
+
+```text
+learning_paths -> path_topics -> topics -> lessons -> quiz_questions
+```
+
+### learning_paths
+
+Lộ trình học phù hợp theo độ tuổi hoặc trình độ của bé.
+
+```sql
+learning_paths (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  age_min INTEGER,
+  age_max INTEGER,
+  level TEXT NOT NULL DEFAULT 'beginner',
+  is_active INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+)
+```
 
 ### topics
 
@@ -76,11 +101,30 @@ Chủ đề học như Animals, Food, Colors.
 ```sql
 topics (
   id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  description TEXT,
-  icon TEXT,
+  name_en TEXT NOT NULL,
+  name_vi TEXT NOT NULL,
+  icon_url TEXT,
+  color_hex TEXT,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  is_unlocked INTEGER NOT NULL DEFAULT 1
+  is_active INTEGER NOT NULL DEFAULT 1
+)
+```
+
+### path_topics
+
+Bảng nối để xác định topic nào nằm trong path nào và thứ tự học trong path.
+
+```sql
+path_topics (
+  id TEXT PRIMARY KEY,
+  path_id TEXT NOT NULL,
+  topic_id TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_required INTEGER NOT NULL DEFAULT 1,
+  unlock_rule_json TEXT,
+  UNIQUE(path_id, topic_id),
+  FOREIGN KEY(path_id) REFERENCES learning_paths(id),
+  FOREIGN KEY(topic_id) REFERENCES topics(id)
 )
 ```
 
@@ -92,12 +136,17 @@ Bài học thuộc một topic.
 lessons (
   id TEXT PRIMARY KEY,
   topic_id TEXT NOT NULL,
-  title TEXT NOT NULL,
-  description TEXT,
+  title_en TEXT NOT NULL,
+  title_vi TEXT NOT NULL,
+  description_vi TEXT,
   level INTEGER NOT NULL DEFAULT 1,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  estimated_minutes INTEGER,
-  is_unlocked INTEGER NOT NULL DEFAULT 0,
+  min_xp_required INTEGER NOT NULL DEFAULT 0,
+  is_published INTEGER NOT NULL DEFAULT 1,
+  thumbnail_url TEXT,
+  vocabulary_count INTEGER NOT NULL DEFAULT 0,
+  question_count INTEGER NOT NULL DEFAULT 0,
+  xp_reward INTEGER NOT NULL DEFAULT 50,
   FOREIGN KEY(topic_id) REFERENCES topics(id)
 )
 ```
@@ -114,6 +163,8 @@ quiz_questions (
   prompt TEXT,
   content_json TEXT NOT NULL,
   difficulty INTEGER NOT NULL DEFAULT 1,
+  xp_reward INTEGER NOT NULL DEFAULT 10,
+  time_limit_sec INTEGER,
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_active INTEGER NOT NULL DEFAULT 1,
   FOREIGN KEY(lesson_id) REFERENCES lessons(id)
@@ -141,29 +192,70 @@ Danh sách từ vựng.
 ```sql
 vocabulary_items (
   id TEXT PRIMARY KEY,
+  lesson_id TEXT NOT NULL,
   word TEXT NOT NULL,
-  translation_vi TEXT,
   phonetic TEXT,
+  translation_vi TEXT NOT NULL,
   image_url TEXT,
   audio_url TEXT,
-  topic_id TEXT,
-  difficulty INTEGER NOT NULL DEFAULT 1,
-  FOREIGN KEY(topic_id) REFERENCES topics(id)
+  part_of_speech TEXT,
+  is_key_word INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY(lesson_id) REFERENCES lessons(id)
 )
 ```
 
-### content_versions
+### child_learning_paths
 
-Theo dõi version nội dung đã seed hoặc import vào local DB.
+Path đang được gán cho từng bé.
 
 ```sql
-content_versions (
+child_learning_paths (
   id TEXT PRIMARY KEY,
-  version TEXT NOT NULL,
-  source TEXT,
-  applied_at INTEGER NOT NULL
+  child_id TEXT NOT NULL,
+  path_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  current_topic_id TEXT,
+  current_lesson_id TEXT,
+  started_at INTEGER NOT NULL,
+  completed_at INTEGER,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  UNIQUE(child_id, path_id),
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id),
+  FOREIGN KEY(path_id) REFERENCES learning_paths(id)
 )
 ```
+
+## Đồng Bộ Nội Dung
+
+### sync_versions
+
+Theo dõi version sync theo từng nhóm dữ liệu độc lập. Ví dụ API báo `lessons` có version mới nhưng `quiz_questions` không đổi, app chỉ cần sync `lessons`.
+
+```sql
+sync_versions (
+  id TEXT PRIMARY KEY,
+  sync_key TEXT NOT NULL UNIQUE,
+  version TEXT NOT NULL,
+  source TEXT NOT NULL,
+  applied_at INTEGER NOT NULL,
+  last_checked_at INTEGER,
+  last_error TEXT
+)
+```
+
+Ví dụ `sync_key`:
+
+- `learning_paths`
+- `path_topics`
+- `topics`
+- `lessons`
+- `quiz_questions`
+- `vocabulary_items`
 
 ## Tiến Độ Học
 
@@ -579,6 +671,7 @@ Khi implement Drift, mỗi bảng có sync metadata riêng nên index `sync_stat
 
 ```text
 child_profiles 1 - n lesson_progress
+child_profiles 1 - n child_learning_paths
 child_profiles 1 - n learning_sessions
 child_profiles 1 - n quiz_sessions
 child_profiles 1 - n quiz_attempts
@@ -586,9 +679,11 @@ child_profiles 1 - n vocabulary_progress
 child_profiles 1 - n xp_events
 child_profiles 1 - n daily_activity
 
+learning_paths 1 - n path_topics
+topics 1 - n path_topics
 topics 1 - n lessons
-topics 1 - n vocabulary_items
 lessons 1 - n quiz_questions
+lessons 1 - n vocabulary_items
 lessons 1 - n lesson_progress
 lessons 1 - n quiz_sessions
 quiz_sessions 1 - n quiz_attempts
@@ -600,26 +695,30 @@ achievements 1 - n child_achievements
 ## Thứ Tự Implement Drift
 
 1. `child_profiles`
-2. `topics`, `lessons`, `quiz_questions`
-3. `lesson_progress`
-4. `learning_sessions`, `quiz_sessions`, `quiz_attempts`
-5. `vocabulary_items`, `vocabulary_progress`
-6. `xp_events`, `daily_activity`
-7. `achievements`, `child_achievements`
-8. `app_settings`, `asset_cache`, `parent_pins`
-9. Sync metadata và migration cho phase API
+2. `sync_versions`
+3. `learning_paths`, `topics`, `path_topics`, `child_learning_paths`
+4. `lessons`, `quiz_questions`, `vocabulary_items`
+5. `lesson_progress`
+6. `learning_sessions`, `quiz_sessions`, `quiz_attempts`
+7. `vocabulary_progress`
+8. `xp_events`, `daily_activity`
+9. `achievements`, `child_achievements`
+10. `app_settings`, `asset_cache`, `parent_pins`
 
 ## Ghi Chú Cho Phase Hiện Tại
 
 Phase hiện tại chỉ cần tối thiểu:
 
 - `child_profiles`
+- `sync_versions`
+- `learning_paths`
+- `path_topics`
+- `child_learning_paths`
 - `topics`
 - `lessons`
 - `quiz_questions`
+- `vocabulary_items`
 - `lesson_progress`
 - `quiz_attempts`
-- `xp_events`
-- `daily_activity`
 
 Các bảng còn lại nên thiết kế sẵn trong tài liệu, nhưng có thể implement sau khi app cần dashboard, achievement, asset download hoặc sync API.
