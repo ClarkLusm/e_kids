@@ -8,6 +8,7 @@ App dùng Drift để lưu dữ liệu học tập của bé theo hướng local
 
 - Lưu profile bé sau màn chọn nhân vật.
 - Lưu nội dung học local: chủ đề, bài học, câu hỏi quiz, từ vựng.
+- Lưu kết quả khảo sát đầu vào để gán lộ trình học phù hợp.
 - Theo dõi tiến độ học, lịch sử làm quiz, XP, streak và hoạt động hằng ngày.
 - Hỗ trợ resume bài học.
 - Chuẩn bị sẵn metadata để sync API trong tương lai.
@@ -229,6 +230,48 @@ child_learning_paths (
   FOREIGN KEY(path_id) REFERENCES learning_paths(id)
 )
 ```
+
+### placement_sessions
+
+Lưu lịch sử chọn lộ trình ở onboarding. Bé có thể bỏ qua khảo sát, khi đó app gán `learning_paths` mặc định. Nếu bé làm khảo sát, app lưu điểm và path được chọn theo kết quả.
+
+```sql
+placement_sessions (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'started',
+  score INTEGER NOT NULL DEFAULT 0,
+  max_score INTEGER NOT NULL DEFAULT 0,
+  recommended_path_id TEXT,
+  selected_path_id TEXT,
+  answers_json TEXT,
+  started_at INTEGER NOT NULL,
+  completed_at INTEGER,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id),
+  FOREIGN KEY(recommended_path_id) REFERENCES learning_paths(id),
+  FOREIGN KEY(selected_path_id) REFERENCES learning_paths(id)
+)
+```
+
+Giá trị `status`:
+
+- `started`: bé đã bắt đầu khảo sát nhưng chưa hoàn tất.
+- `skipped`: phụ huynh/bé bỏ qua khảo sát, app dùng path mặc định.
+- `completed`: khảo sát đã hoàn tất và app đã gán path theo điểm.
+
+Flow gán path hiện tại:
+
+```text
+select_profile -> placement_intro -> skip -> assign default path -> home
+select_profile -> placement_intro -> placement_test -> score -> assign matched path -> placement_result -> home
+```
+
+Phase local hiện tại có seed path tối thiểu trong app để flow chạy được khi chưa sync API. Sau này API có thể trả về danh sách path và rule chọn path chi tiết hơn; local vẫn chỉ cần ghi `placement_sessions` và cập nhật `child_learning_paths`.
 
 ## Đồng Bộ Nội Dung
 
@@ -672,6 +715,7 @@ Khi implement Drift, mỗi bảng có sync metadata riêng nên index `sync_stat
 ```text
 child_profiles 1 - n lesson_progress
 child_profiles 1 - n child_learning_paths
+child_profiles 1 - n placement_sessions
 child_profiles 1 - n learning_sessions
 child_profiles 1 - n quiz_sessions
 child_profiles 1 - n quiz_attempts
@@ -680,6 +724,8 @@ child_profiles 1 - n xp_events
 child_profiles 1 - n daily_activity
 
 learning_paths 1 - n path_topics
+learning_paths 1 - n child_learning_paths
+learning_paths 1 - n placement_sessions
 topics 1 - n path_topics
 topics 1 - n lessons
 lessons 1 - n quiz_questions
@@ -697,13 +743,14 @@ achievements 1 - n child_achievements
 1. `child_profiles`
 2. `sync_versions`
 3. `learning_paths`, `topics`, `path_topics`, `child_learning_paths`
-4. `lessons`, `quiz_questions`, `vocabulary_items`
-5. `lesson_progress`
-6. `learning_sessions`, `quiz_sessions`, `quiz_attempts`
-7. `vocabulary_progress`
-8. `xp_events`, `daily_activity`
-9. `achievements`, `child_achievements`
-10. `app_settings`, `asset_cache`, `parent_pins`
+4. `placement_sessions`
+5. `lessons`, `quiz_questions`, `vocabulary_items`
+6. `lesson_progress`
+7. `learning_sessions`, `quiz_sessions`, `quiz_attempts`
+8. `vocabulary_progress`
+9. `xp_events`, `daily_activity`
+10. `achievements`, `child_achievements`
+11. `app_settings`, `asset_cache`, `parent_pins`
 
 ## Ghi Chú Cho Phase Hiện Tại
 
@@ -714,6 +761,7 @@ Phase hiện tại chỉ cần tối thiểu:
 - `learning_paths`
 - `path_topics`
 - `child_learning_paths`
+- `placement_sessions`
 - `topics`
 - `lessons`
 - `quiz_questions`

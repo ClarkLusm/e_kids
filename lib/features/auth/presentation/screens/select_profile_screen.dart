@@ -149,7 +149,7 @@ class _SelectProfileScreenState extends ConsumerState<SelectProfileScreen> {
             avatarId: _selectedAvatarId,
           );
       if (!mounted) return;
-      context.go(Routes.home);
+      context.go(Routes.placementIntro);
     } catch (_) {
       // lỗi đã được listen và show snackbar
     }

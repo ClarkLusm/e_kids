@@ -3,6 +3,9 @@ abstract final class Routes {
   static const login = '/auth/login';
   static const register = '/auth/register';
   static const selectProfile = '/profile/select';
+  static const placementIntro = '/placement';
+  static const placementTest = '/placement/test';
+  static const placementResult = '/placement/result';
   static const home = '/home';
   static const achievements = '/achievements';
   static const leaderboard = '/leaderboard';

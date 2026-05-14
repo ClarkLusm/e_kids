@@ -3442,6 +3442,884 @@ class ChildLearningPathsCompanion extends UpdateCompanion<ChildLearningPath> {
   }
 }
 
+class $PlacementSessionsTable extends PlacementSessions
+    with TableInfo<$PlacementSessionsTable, PlacementSession> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PlacementSessionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _childIdMeta = const VerificationMeta(
+    'childId',
+  );
+  @override
+  late final GeneratedColumn<String> childId = GeneratedColumn<String>(
+    'child_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('started'),
+  );
+  static const VerificationMeta _scoreMeta = const VerificationMeta('score');
+  @override
+  late final GeneratedColumn<int> score = GeneratedColumn<int>(
+    'score',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _maxScoreMeta = const VerificationMeta(
+    'maxScore',
+  );
+  @override
+  late final GeneratedColumn<int> maxScore = GeneratedColumn<int>(
+    'max_score',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _recommendedPathIdMeta = const VerificationMeta(
+    'recommendedPathId',
+  );
+  @override
+  late final GeneratedColumn<String> recommendedPathId =
+      GeneratedColumn<String>(
+        'recommended_path_id',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _selectedPathIdMeta = const VerificationMeta(
+    'selectedPathId',
+  );
+  @override
+  late final GeneratedColumn<String> selectedPathId = GeneratedColumn<String>(
+    'selected_path_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _answersJsonMeta = const VerificationMeta(
+    'answersJson',
+  );
+  @override
+  late final GeneratedColumn<String> answersJson = GeneratedColumn<String>(
+    'answers_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<int> startedAt = GeneratedColumn<int>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _completedAtMeta = const VerificationMeta(
+    'completedAt',
+  );
+  @override
+  late final GeneratedColumn<int> completedAt = GeneratedColumn<int>(
+    'completed_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _lastSyncedAtMeta = const VerificationMeta(
+    'lastSyncedAt',
+  );
+  @override
+  late final GeneratedColumn<int> lastSyncedAt = GeneratedColumn<int>(
+    'last_synced_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<int> deletedAt = GeneratedColumn<int>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    childId,
+    status,
+    score,
+    maxScore,
+    recommendedPathId,
+    selectedPathId,
+    answersJson,
+    startedAt,
+    completedAt,
+    updatedAt,
+    remoteId,
+    syncStatus,
+    lastSyncedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'placement_sessions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PlacementSession> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('child_id')) {
+      context.handle(
+        _childIdMeta,
+        childId.isAcceptableOrUnknown(data['child_id']!, _childIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_childIdMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    }
+    if (data.containsKey('score')) {
+      context.handle(
+        _scoreMeta,
+        score.isAcceptableOrUnknown(data['score']!, _scoreMeta),
+      );
+    }
+    if (data.containsKey('max_score')) {
+      context.handle(
+        _maxScoreMeta,
+        maxScore.isAcceptableOrUnknown(data['max_score']!, _maxScoreMeta),
+      );
+    }
+    if (data.containsKey('recommended_path_id')) {
+      context.handle(
+        _recommendedPathIdMeta,
+        recommendedPathId.isAcceptableOrUnknown(
+          data['recommended_path_id']!,
+          _recommendedPathIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('selected_path_id')) {
+      context.handle(
+        _selectedPathIdMeta,
+        selectedPathId.isAcceptableOrUnknown(
+          data['selected_path_id']!,
+          _selectedPathIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('answers_json')) {
+      context.handle(
+        _answersJsonMeta,
+        answersJson.isAcceptableOrUnknown(
+          data['answers_json']!,
+          _answersJsonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('completed_at')) {
+      context.handle(
+        _completedAtMeta,
+        completedAt.isAcceptableOrUnknown(
+          data['completed_at']!,
+          _completedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    if (data.containsKey('last_synced_at')) {
+      context.handle(
+        _lastSyncedAtMeta,
+        lastSyncedAt.isAcceptableOrUnknown(
+          data['last_synced_at']!,
+          _lastSyncedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PlacementSession map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PlacementSession(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      childId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}child_id'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      score: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}score'],
+      )!,
+      maxScore: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}max_score'],
+      )!,
+      recommendedPathId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recommended_path_id'],
+      ),
+      selectedPathId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}selected_path_id'],
+      ),
+      answersJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}answers_json'],
+      ),
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}started_at'],
+      )!,
+      completedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}completed_at'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
+      lastSyncedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_synced_at'],
+      ),
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $PlacementSessionsTable createAlias(String alias) {
+    return $PlacementSessionsTable(attachedDatabase, alias);
+  }
+}
+
+class PlacementSession extends DataClass
+    implements Insertable<PlacementSession> {
+  final String id;
+  final String childId;
+  final String status;
+  final int score;
+  final int maxScore;
+  final String? recommendedPathId;
+  final String? selectedPathId;
+  final String? answersJson;
+  final int startedAt;
+  final int? completedAt;
+  final int updatedAt;
+  final String? remoteId;
+  final String syncStatus;
+  final int? lastSyncedAt;
+  final int? deletedAt;
+  const PlacementSession({
+    required this.id,
+    required this.childId,
+    required this.status,
+    required this.score,
+    required this.maxScore,
+    this.recommendedPathId,
+    this.selectedPathId,
+    this.answersJson,
+    required this.startedAt,
+    this.completedAt,
+    required this.updatedAt,
+    this.remoteId,
+    required this.syncStatus,
+    this.lastSyncedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['child_id'] = Variable<String>(childId);
+    map['status'] = Variable<String>(status);
+    map['score'] = Variable<int>(score);
+    map['max_score'] = Variable<int>(maxScore);
+    if (!nullToAbsent || recommendedPathId != null) {
+      map['recommended_path_id'] = Variable<String>(recommendedPathId);
+    }
+    if (!nullToAbsent || selectedPathId != null) {
+      map['selected_path_id'] = Variable<String>(selectedPathId);
+    }
+    if (!nullToAbsent || answersJson != null) {
+      map['answers_json'] = Variable<String>(answersJson);
+    }
+    map['started_at'] = Variable<int>(startedAt);
+    if (!nullToAbsent || completedAt != null) {
+      map['completed_at'] = Variable<int>(completedAt);
+    }
+    map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    map['sync_status'] = Variable<String>(syncStatus);
+    if (!nullToAbsent || lastSyncedAt != null) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt);
+    }
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<int>(deletedAt);
+    }
+    return map;
+  }
+
+  PlacementSessionsCompanion toCompanion(bool nullToAbsent) {
+    return PlacementSessionsCompanion(
+      id: Value(id),
+      childId: Value(childId),
+      status: Value(status),
+      score: Value(score),
+      maxScore: Value(maxScore),
+      recommendedPathId: recommendedPathId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recommendedPathId),
+      selectedPathId: selectedPathId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(selectedPathId),
+      answersJson: answersJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(answersJson),
+      startedAt: Value(startedAt),
+      completedAt: completedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(completedAt),
+      updatedAt: Value(updatedAt),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+      syncStatus: Value(syncStatus),
+      lastSyncedAt: lastSyncedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastSyncedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory PlacementSession.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PlacementSession(
+      id: serializer.fromJson<String>(json['id']),
+      childId: serializer.fromJson<String>(json['childId']),
+      status: serializer.fromJson<String>(json['status']),
+      score: serializer.fromJson<int>(json['score']),
+      maxScore: serializer.fromJson<int>(json['maxScore']),
+      recommendedPathId: serializer.fromJson<String?>(
+        json['recommendedPathId'],
+      ),
+      selectedPathId: serializer.fromJson<String?>(json['selectedPathId']),
+      answersJson: serializer.fromJson<String?>(json['answersJson']),
+      startedAt: serializer.fromJson<int>(json['startedAt']),
+      completedAt: serializer.fromJson<int?>(json['completedAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      lastSyncedAt: serializer.fromJson<int?>(json['lastSyncedAt']),
+      deletedAt: serializer.fromJson<int?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'childId': serializer.toJson<String>(childId),
+      'status': serializer.toJson<String>(status),
+      'score': serializer.toJson<int>(score),
+      'maxScore': serializer.toJson<int>(maxScore),
+      'recommendedPathId': serializer.toJson<String?>(recommendedPathId),
+      'selectedPathId': serializer.toJson<String?>(selectedPathId),
+      'answersJson': serializer.toJson<String?>(answersJson),
+      'startedAt': serializer.toJson<int>(startedAt),
+      'completedAt': serializer.toJson<int?>(completedAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'remoteId': serializer.toJson<String?>(remoteId),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'lastSyncedAt': serializer.toJson<int?>(lastSyncedAt),
+      'deletedAt': serializer.toJson<int?>(deletedAt),
+    };
+  }
+
+  PlacementSession copyWith({
+    String? id,
+    String? childId,
+    String? status,
+    int? score,
+    int? maxScore,
+    Value<String?> recommendedPathId = const Value.absent(),
+    Value<String?> selectedPathId = const Value.absent(),
+    Value<String?> answersJson = const Value.absent(),
+    int? startedAt,
+    Value<int?> completedAt = const Value.absent(),
+    int? updatedAt,
+    Value<String?> remoteId = const Value.absent(),
+    String? syncStatus,
+    Value<int?> lastSyncedAt = const Value.absent(),
+    Value<int?> deletedAt = const Value.absent(),
+  }) => PlacementSession(
+    id: id ?? this.id,
+    childId: childId ?? this.childId,
+    status: status ?? this.status,
+    score: score ?? this.score,
+    maxScore: maxScore ?? this.maxScore,
+    recommendedPathId: recommendedPathId.present
+        ? recommendedPathId.value
+        : this.recommendedPathId,
+    selectedPathId: selectedPathId.present
+        ? selectedPathId.value
+        : this.selectedPathId,
+    answersJson: answersJson.present ? answersJson.value : this.answersJson,
+    startedAt: startedAt ?? this.startedAt,
+    completedAt: completedAt.present ? completedAt.value : this.completedAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+    syncStatus: syncStatus ?? this.syncStatus,
+    lastSyncedAt: lastSyncedAt.present ? lastSyncedAt.value : this.lastSyncedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  PlacementSession copyWithCompanion(PlacementSessionsCompanion data) {
+    return PlacementSession(
+      id: data.id.present ? data.id.value : this.id,
+      childId: data.childId.present ? data.childId.value : this.childId,
+      status: data.status.present ? data.status.value : this.status,
+      score: data.score.present ? data.score.value : this.score,
+      maxScore: data.maxScore.present ? data.maxScore.value : this.maxScore,
+      recommendedPathId: data.recommendedPathId.present
+          ? data.recommendedPathId.value
+          : this.recommendedPathId,
+      selectedPathId: data.selectedPathId.present
+          ? data.selectedPathId.value
+          : this.selectedPathId,
+      answersJson: data.answersJson.present
+          ? data.answersJson.value
+          : this.answersJson,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      completedAt: data.completedAt.present
+          ? data.completedAt.value
+          : this.completedAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+      lastSyncedAt: data.lastSyncedAt.present
+          ? data.lastSyncedAt.value
+          : this.lastSyncedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlacementSession(')
+          ..write('id: $id, ')
+          ..write('childId: $childId, ')
+          ..write('status: $status, ')
+          ..write('score: $score, ')
+          ..write('maxScore: $maxScore, ')
+          ..write('recommendedPathId: $recommendedPathId, ')
+          ..write('selectedPathId: $selectedPathId, ')
+          ..write('answersJson: $answersJson, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    childId,
+    status,
+    score,
+    maxScore,
+    recommendedPathId,
+    selectedPathId,
+    answersJson,
+    startedAt,
+    completedAt,
+    updatedAt,
+    remoteId,
+    syncStatus,
+    lastSyncedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PlacementSession &&
+          other.id == this.id &&
+          other.childId == this.childId &&
+          other.status == this.status &&
+          other.score == this.score &&
+          other.maxScore == this.maxScore &&
+          other.recommendedPathId == this.recommendedPathId &&
+          other.selectedPathId == this.selectedPathId &&
+          other.answersJson == this.answersJson &&
+          other.startedAt == this.startedAt &&
+          other.completedAt == this.completedAt &&
+          other.updatedAt == this.updatedAt &&
+          other.remoteId == this.remoteId &&
+          other.syncStatus == this.syncStatus &&
+          other.lastSyncedAt == this.lastSyncedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class PlacementSessionsCompanion extends UpdateCompanion<PlacementSession> {
+  final Value<String> id;
+  final Value<String> childId;
+  final Value<String> status;
+  final Value<int> score;
+  final Value<int> maxScore;
+  final Value<String?> recommendedPathId;
+  final Value<String?> selectedPathId;
+  final Value<String?> answersJson;
+  final Value<int> startedAt;
+  final Value<int?> completedAt;
+  final Value<int> updatedAt;
+  final Value<String?> remoteId;
+  final Value<String> syncStatus;
+  final Value<int?> lastSyncedAt;
+  final Value<int?> deletedAt;
+  final Value<int> rowid;
+  const PlacementSessionsCompanion({
+    this.id = const Value.absent(),
+    this.childId = const Value.absent(),
+    this.status = const Value.absent(),
+    this.score = const Value.absent(),
+    this.maxScore = const Value.absent(),
+    this.recommendedPathId = const Value.absent(),
+    this.selectedPathId = const Value.absent(),
+    this.answersJson = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.completedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PlacementSessionsCompanion.insert({
+    required String id,
+    required String childId,
+    this.status = const Value.absent(),
+    this.score = const Value.absent(),
+    this.maxScore = const Value.absent(),
+    this.recommendedPathId = const Value.absent(),
+    this.selectedPathId = const Value.absent(),
+    this.answersJson = const Value.absent(),
+    required int startedAt,
+    this.completedAt = const Value.absent(),
+    required int updatedAt,
+    this.remoteId = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.lastSyncedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       childId = Value(childId),
+       startedAt = Value(startedAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<PlacementSession> custom({
+    Expression<String>? id,
+    Expression<String>? childId,
+    Expression<String>? status,
+    Expression<int>? score,
+    Expression<int>? maxScore,
+    Expression<String>? recommendedPathId,
+    Expression<String>? selectedPathId,
+    Expression<String>? answersJson,
+    Expression<int>? startedAt,
+    Expression<int>? completedAt,
+    Expression<int>? updatedAt,
+    Expression<String>? remoteId,
+    Expression<String>? syncStatus,
+    Expression<int>? lastSyncedAt,
+    Expression<int>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (childId != null) 'child_id': childId,
+      if (status != null) 'status': status,
+      if (score != null) 'score': score,
+      if (maxScore != null) 'max_score': maxScore,
+      if (recommendedPathId != null) 'recommended_path_id': recommendedPathId,
+      if (selectedPathId != null) 'selected_path_id': selectedPathId,
+      if (answersJson != null) 'answers_json': answersJson,
+      if (startedAt != null) 'started_at': startedAt,
+      if (completedAt != null) 'completed_at': completedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (lastSyncedAt != null) 'last_synced_at': lastSyncedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PlacementSessionsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? childId,
+    Value<String>? status,
+    Value<int>? score,
+    Value<int>? maxScore,
+    Value<String?>? recommendedPathId,
+    Value<String?>? selectedPathId,
+    Value<String?>? answersJson,
+    Value<int>? startedAt,
+    Value<int?>? completedAt,
+    Value<int>? updatedAt,
+    Value<String?>? remoteId,
+    Value<String>? syncStatus,
+    Value<int?>? lastSyncedAt,
+    Value<int?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return PlacementSessionsCompanion(
+      id: id ?? this.id,
+      childId: childId ?? this.childId,
+      status: status ?? this.status,
+      score: score ?? this.score,
+      maxScore: maxScore ?? this.maxScore,
+      recommendedPathId: recommendedPathId ?? this.recommendedPathId,
+      selectedPathId: selectedPathId ?? this.selectedPathId,
+      answersJson: answersJson ?? this.answersJson,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      remoteId: remoteId ?? this.remoteId,
+      syncStatus: syncStatus ?? this.syncStatus,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (childId.present) {
+      map['child_id'] = Variable<String>(childId.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (score.present) {
+      map['score'] = Variable<int>(score.value);
+    }
+    if (maxScore.present) {
+      map['max_score'] = Variable<int>(maxScore.value);
+    }
+    if (recommendedPathId.present) {
+      map['recommended_path_id'] = Variable<String>(recommendedPathId.value);
+    }
+    if (selectedPathId.present) {
+      map['selected_path_id'] = Variable<String>(selectedPathId.value);
+    }
+    if (answersJson.present) {
+      map['answers_json'] = Variable<String>(answersJson.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<int>(startedAt.value);
+    }
+    if (completedAt.present) {
+      map['completed_at'] = Variable<int>(completedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (lastSyncedAt.present) {
+      map['last_synced_at'] = Variable<int>(lastSyncedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<int>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PlacementSessionsCompanion(')
+          ..write('id: $id, ')
+          ..write('childId: $childId, ')
+          ..write('status: $status, ')
+          ..write('score: $score, ')
+          ..write('maxScore: $maxScore, ')
+          ..write('recommendedPathId: $recommendedPathId, ')
+          ..write('selectedPathId: $selectedPathId, ')
+          ..write('answersJson: $answersJson, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('completedAt: $completedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('lastSyncedAt: $lastSyncedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $LessonsTable extends Lessons with TableInfo<$LessonsTable, Lesson> {
   @override
   final GeneratedDatabase attachedDatabase;
@@ -7626,6 +8504,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PathTopicsTable pathTopics = $PathTopicsTable(this);
   late final $ChildLearningPathsTable childLearningPaths =
       $ChildLearningPathsTable(this);
+  late final $PlacementSessionsTable placementSessions =
+      $PlacementSessionsTable(this);
   late final $LessonsTable lessons = $LessonsTable(this);
   late final $QuizQuestionsTable quizQuestions = $QuizQuestionsTable(this);
   late final $VocabularyItemsTable vocabularyItems = $VocabularyItemsTable(
@@ -7645,6 +8525,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     topics,
     pathTopics,
     childLearningPaths,
+    placementSessions,
     lessons,
     quizQuestions,
     vocabularyItems,
@@ -9354,6 +10235,421 @@ typedef $$ChildLearningPathsTableProcessedTableManager =
         >,
       ),
       ChildLearningPath,
+      PrefetchHooks Function()
+    >;
+typedef $$PlacementSessionsTableCreateCompanionBuilder =
+    PlacementSessionsCompanion Function({
+      required String id,
+      required String childId,
+      Value<String> status,
+      Value<int> score,
+      Value<int> maxScore,
+      Value<String?> recommendedPathId,
+      Value<String?> selectedPathId,
+      Value<String?> answersJson,
+      required int startedAt,
+      Value<int?> completedAt,
+      required int updatedAt,
+      Value<String?> remoteId,
+      Value<String> syncStatus,
+      Value<int?> lastSyncedAt,
+      Value<int?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$PlacementSessionsTableUpdateCompanionBuilder =
+    PlacementSessionsCompanion Function({
+      Value<String> id,
+      Value<String> childId,
+      Value<String> status,
+      Value<int> score,
+      Value<int> maxScore,
+      Value<String?> recommendedPathId,
+      Value<String?> selectedPathId,
+      Value<String?> answersJson,
+      Value<int> startedAt,
+      Value<int?> completedAt,
+      Value<int> updatedAt,
+      Value<String?> remoteId,
+      Value<String> syncStatus,
+      Value<int?> lastSyncedAt,
+      Value<int?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$PlacementSessionsTableFilterComposer
+    extends Composer<_$AppDatabase, $PlacementSessionsTable> {
+  $$PlacementSessionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get childId => $composableBuilder(
+    column: $table.childId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get score => $composableBuilder(
+    column: $table.score,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get maxScore => $composableBuilder(
+    column: $table.maxScore,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recommendedPathId => $composableBuilder(
+    column: $table.recommendedPathId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get selectedPathId => $composableBuilder(
+    column: $table.selectedPathId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get answersJson => $composableBuilder(
+    column: $table.answersJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PlacementSessionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PlacementSessionsTable> {
+  $$PlacementSessionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get childId => $composableBuilder(
+    column: $table.childId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get score => $composableBuilder(
+    column: $table.score,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get maxScore => $composableBuilder(
+    column: $table.maxScore,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recommendedPathId => $composableBuilder(
+    column: $table.recommendedPathId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get selectedPathId => $composableBuilder(
+    column: $table.selectedPathId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get answersJson => $composableBuilder(
+    column: $table.answersJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PlacementSessionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PlacementSessionsTable> {
+  $$PlacementSessionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get childId =>
+      $composableBuilder(column: $table.childId, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get score =>
+      $composableBuilder(column: $table.score, builder: (column) => column);
+
+  GeneratedColumn<int> get maxScore =>
+      $composableBuilder(column: $table.maxScore, builder: (column) => column);
+
+  GeneratedColumn<String> get recommendedPathId => $composableBuilder(
+    column: $table.recommendedPathId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get selectedPathId => $composableBuilder(
+    column: $table.selectedPathId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get answersJson => $composableBuilder(
+    column: $table.answersJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get completedAt => $composableBuilder(
+    column: $table.completedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastSyncedAt => $composableBuilder(
+    column: $table.lastSyncedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$PlacementSessionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PlacementSessionsTable,
+          PlacementSession,
+          $$PlacementSessionsTableFilterComposer,
+          $$PlacementSessionsTableOrderingComposer,
+          $$PlacementSessionsTableAnnotationComposer,
+          $$PlacementSessionsTableCreateCompanionBuilder,
+          $$PlacementSessionsTableUpdateCompanionBuilder,
+          (
+            PlacementSession,
+            BaseReferences<
+              _$AppDatabase,
+              $PlacementSessionsTable,
+              PlacementSession
+            >,
+          ),
+          PlacementSession,
+          PrefetchHooks Function()
+        > {
+  $$PlacementSessionsTableTableManager(
+    _$AppDatabase db,
+    $PlacementSessionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PlacementSessionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PlacementSessionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PlacementSessionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> childId = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> score = const Value.absent(),
+                Value<int> maxScore = const Value.absent(),
+                Value<String?> recommendedPathId = const Value.absent(),
+                Value<String?> selectedPathId = const Value.absent(),
+                Value<String?> answersJson = const Value.absent(),
+                Value<int> startedAt = const Value.absent(),
+                Value<int?> completedAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<int?> lastSyncedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PlacementSessionsCompanion(
+                id: id,
+                childId: childId,
+                status: status,
+                score: score,
+                maxScore: maxScore,
+                recommendedPathId: recommendedPathId,
+                selectedPathId: selectedPathId,
+                answersJson: answersJson,
+                startedAt: startedAt,
+                completedAt: completedAt,
+                updatedAt: updatedAt,
+                remoteId: remoteId,
+                syncStatus: syncStatus,
+                lastSyncedAt: lastSyncedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String childId,
+                Value<String> status = const Value.absent(),
+                Value<int> score = const Value.absent(),
+                Value<int> maxScore = const Value.absent(),
+                Value<String?> recommendedPathId = const Value.absent(),
+                Value<String?> selectedPathId = const Value.absent(),
+                Value<String?> answersJson = const Value.absent(),
+                required int startedAt,
+                Value<int?> completedAt = const Value.absent(),
+                required int updatedAt,
+                Value<String?> remoteId = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<int?> lastSyncedAt = const Value.absent(),
+                Value<int?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PlacementSessionsCompanion.insert(
+                id: id,
+                childId: childId,
+                status: status,
+                score: score,
+                maxScore: maxScore,
+                recommendedPathId: recommendedPathId,
+                selectedPathId: selectedPathId,
+                answersJson: answersJson,
+                startedAt: startedAt,
+                completedAt: completedAt,
+                updatedAt: updatedAt,
+                remoteId: remoteId,
+                syncStatus: syncStatus,
+                lastSyncedAt: lastSyncedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PlacementSessionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PlacementSessionsTable,
+      PlacementSession,
+      $$PlacementSessionsTableFilterComposer,
+      $$PlacementSessionsTableOrderingComposer,
+      $$PlacementSessionsTableAnnotationComposer,
+      $$PlacementSessionsTableCreateCompanionBuilder,
+      $$PlacementSessionsTableUpdateCompanionBuilder,
+      (
+        PlacementSession,
+        BaseReferences<
+          _$AppDatabase,
+          $PlacementSessionsTable,
+          PlacementSession
+        >,
+      ),
+      PlacementSession,
       PrefetchHooks Function()
     >;
 typedef $$LessonsTableCreateCompanionBuilder =
@@ -11334,6 +12630,8 @@ class $AppDatabaseManager {
       $$PathTopicsTableTableManager(_db, _db.pathTopics);
   $$ChildLearningPathsTableTableManager get childLearningPaths =>
       $$ChildLearningPathsTableTableManager(_db, _db.childLearningPaths);
+  $$PlacementSessionsTableTableManager get placementSessions =>
+      $$PlacementSessionsTableTableManager(_db, _db.placementSessions);
   $$LessonsTableTableManager get lessons =>
       $$LessonsTableTableManager(_db, _db.lessons);
   $$QuizQuestionsTableTableManager get quizQuestions =>

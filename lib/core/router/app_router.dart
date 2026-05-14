@@ -9,12 +9,18 @@ import 'package:e_kids/core/router/app_routes.dart';
 import 'package:e_kids/features/auth/presentation/screens/login_screen.dart';
 import 'package:e_kids/features/auth/presentation/screens/register_screen.dart';
 import 'package:e_kids/features/auth/presentation/screens/select_profile_screen.dart';
+import 'package:e_kids/features/placement/presentation/providers/placement_providers.dart';
+import 'package:e_kids/features/placement/domain/models/placement_result.dart';
+import 'package:e_kids/features/placement/presentation/screens/placement_intro_screen.dart';
+import 'package:e_kids/features/placement/presentation/screens/placement_result_screen.dart';
+import 'package:e_kids/features/placement/presentation/screens/placement_test_screen.dart';
 import 'package:e_kids/features/splash/presentation/screens/splash_screen.dart';
 import 'package:e_kids/features/settings/presentation/screens/settings_screen.dart';
 import 'package:e_kids/features/auth/presentation/providers/auth_providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
+  final hasActiveLearningPath = ref.watch(hasActiveLearningPathProvider);
 
   // key để push màn full-screen ra ngoài shell
   final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -33,12 +39,29 @@ final routerProvider = Provider<GoRouter>((ref) {
       final onSelectProfile = state.matchedLocation == Routes.selectProfile;
       final onAuth = state.matchedLocation.startsWith('/auth');
       final onSplash = state.matchedLocation == Routes.splash;
+      final onPlacement = state.matchedLocation.startsWith('/placement');
+      final onPlacementResult = state.matchedLocation == Routes.placementResult;
 
       if (!hasLocalProfile && !onSelectProfile) {
         return Routes.selectProfile;
       }
 
-      if (hasLocalProfile && (onSplash || onSelectProfile || onAuth)) {
+      if (hasLocalProfile && hasActiveLearningPath.isLoading) {
+        return null;
+      }
+
+      final hasPath = hasActiveLearningPath.valueOrNull == true;
+
+      if (hasLocalProfile && !hasPath && !onPlacement) {
+        return Routes.placementIntro;
+      }
+
+      if (hasLocalProfile &&
+          hasPath &&
+          (onSplash ||
+              onSelectProfile ||
+              onAuth ||
+              (onPlacement && !onPlacementResult))) {
         return Routes.home;
       }
 
@@ -54,6 +77,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.selectProfile,
         builder: (_, __) => const SelectProfileScreen(),
+      ),
+      GoRoute(
+        path: Routes.placementIntro,
+        builder: (_, __) => const PlacementIntroScreen(),
+      ),
+      GoRoute(
+        path: Routes.placementTest,
+        builder: (_, __) => const PlacementTestScreen(),
+      ),
+      GoRoute(
+        path: Routes.placementResult,
+        builder: (_, state) => PlacementResultScreen(
+          result: state.extra is PlacementResult
+              ? state.extra as PlacementResult
+              : null,
+        ),
       ),
 
       GoRoute(
@@ -97,8 +136,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             index = 1;
           } else if (loc.startsWith('/play')) {
             index = 2;
-          } else if (loc.startsWith('/profile')) {
+          } else if (loc.startsWith(Routes.achievements)) {
             index = 3;
+          } else if (loc.startsWith('/profile')) {
+            index = 4;
           }
 
           return Scaffold(
@@ -117,6 +158,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                     context.go('/play');
                     break;
                   case 3:
+                    context.go(Routes.achievements);
+                    break;
+                  case 4:
                     context.go('/profile');
                     break;
                 }

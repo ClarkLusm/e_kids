@@ -4,6 +4,7 @@ import '../../../../core/database/daos/lesson_progress_dao.dart';
 import '../../../../core/database/database_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../data/local/local_lesson_progress_repository.dart';
+import '../../data/local/local_topic_repository.dart';
 import '../../data/lesson_repository.dart';
 import '../../domain/models/lesson_models.dart';
 import '../../../quiz/_shared/question_ref.dart';
@@ -12,7 +13,7 @@ import '../../domain/usecases/lesson_usecases.dart';
 // ─── Repository providers ─────────────────────────────────────────────────
 
 final topicRepoProvider = Provider<ITopicRepository>(
-  (_) => MockTopicRepository(),
+  (ref) => LocalTopicRepository(ref.watch(appDatabaseProvider)),
 );
 
 final lessonRepoProvider = Provider<ILessonRepository>(

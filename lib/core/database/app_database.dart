@@ -11,6 +11,7 @@ import 'tables/lesson_progress_table.dart';
 import 'tables/learning_paths_table.dart';
 import 'tables/lessons_table.dart';
 import 'tables/path_topics_table.dart';
+import 'tables/placement_sessions_table.dart';
 import 'tables/quiz_questions_table.dart';
 import 'tables/quiz_attempts_table.dart';
 import 'tables/sync_versions_table.dart';
@@ -27,6 +28,7 @@ part 'app_database.g.dart';
     Topics,
     PathTopics,
     ChildLearningPaths,
+    PlacementSessions,
     Lessons,
     QuizQuestions,
     VocabularyItems,
@@ -38,7 +40,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -56,6 +58,9 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(lessons);
         await m.createTable(quizQuestions);
         await m.createTable(vocabularyItems);
+      }
+      if (from < 4) {
+        await m.createTable(placementSessions);
       }
     },
   );
