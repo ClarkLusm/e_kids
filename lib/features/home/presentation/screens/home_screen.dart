@@ -1,54 +1,20 @@
 import 'package:e_kids/features/auth/presentation/providers/auth_providers.dart';
+import 'package:e_kids/features/home/domain/models/home_learning_summary.dart';
+import 'package:e_kids/features/home/domain/models/home_mission.dart';
+import 'package:e_kids/features/home/domain/models/path_topic_summary.dart';
+import 'package:e_kids/features/home/domain/models/skill_progress_summary.dart';
+import 'package:e_kids/features/home/presentation/providers/daily_mission_providers.dart';
+import 'package:e_kids/features/home/presentation/providers/learning_summary_providers.dart';
+import 'package:e_kids/features/home/presentation/providers/path_topic_providers.dart';
+import 'package:e_kids/features/home/presentation/providers/skill_progress_providers.dart';
 import 'package:e_kids/features/lesson/domain/models/lesson_models.dart';
 import 'package:e_kids/features/lesson/presentation/providers/lesson_providers.dart';
 import 'package:e_kids/features/lesson/presentation/screens/topic_sceen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-final homeLearningSummaryProvider =
-    FutureProvider.autoDispose<HomeLearningSummary>((ref) async {
-      final childId = ref.watch(currentChildIdProvider);
-      final progressMap = await ref
-          .watch(lessonProgressDaoProvider)
-          .getProgressByChild(childId);
-      return HomeLearningSummary.fromProgress(progressMap.values);
-    });
-
-class HomeLearningSummary {
-  const HomeLearningSummary({
-    required this.totalXp,
-    required this.completedLessons,
-  });
-
-  final int totalXp;
-  final int completedLessons;
-
-  static const empty = HomeLearningSummary(totalXp: 0, completedLessons: 0);
-
-  factory HomeLearningSummary.fromProgress(
-    Iterable<LessonProgress> progressItems,
-  ) {
-    var totalXp = 0;
-    var completedLessons = 0;
-
-    for (final progress in progressItems) {
-      totalXp += progress.totalXpEarned;
-      if (progress.isDone) {
-        completedLessons++;
-      }
-    }
-
-    return HomeLearningSummary(
-      totalXp: totalXp,
-      completedLessons: completedLessons,
-    );
-  }
-
-  int get level => (totalXp ~/ 100) + 1;
-  int get nextLevel => level + 1;
-  double get levelProgress => ((totalXp % 100) / 100).clamp(0.0, 1.0);
-  int get levelProgressPercent => (levelProgress * 100).round();
-}
+import '../../../../core/router/app_routes.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -56,11 +22,8 @@ class HomeScreen extends ConsumerWidget {
   static const _skyTop = Color(0xFF16B4FF);
   static const _skyBottom = Color(0xFF86E7FF);
   static const _navy = Color(0xFF063B82);
-  static const _blue = Color(0xFF0368D9);
   static const _yellow = Color(0xFFFFD22E);
   static const _orange = Color(0xFFFF7A18);
-  static const _green = Color(0xFF29C315);
-  static const _red = Color(0xFFFF3E28);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,6 +36,9 @@ class HomeScreen extends ConsumerWidget {
         ref.watch(homeLearningSummaryProvider).valueOrNull ??
         HomeLearningSummary.empty;
     final topicsAsync = ref.watch(topicListProvider);
+    final missionsAsync = ref.watch(todayMissionsProvider);
+    final skillProgressAsync = ref.watch(homeSkillProgressProvider);
+    final pathTopicsAsync = ref.watch(homePathTopicSummariesProvider);
 
     return Scaffold(
       backgroundColor: _skyTop,
@@ -90,14 +56,14 @@ class HomeScreen extends ConsumerWidget {
                     delegate: SliverChildListDelegate.fixed([
                       _HeroLevelPanel(summary: summary),
                       const SizedBox(height: 16),
-                      _QuickActions(),
+                      _QuickActions(missionsAsync: missionsAsync),
                       const SizedBox(height: 14),
                       _DailyChallengeCard(
                         avatar: avatar,
                         onStart: () => _openFirstTopic(context, topicsAsync),
                       ),
                       const SizedBox(height: 14),
-                      _LearningProgressCard(summary: summary),
+                      _LearningProgressCard(skillsAsync: skillProgressAsync),
                       const SizedBox(height: 14),
                       _TodayLessonCard(
                         topicsAsync: topicsAsync,
@@ -105,8 +71,8 @@ class HomeScreen extends ConsumerWidget {
                         topicEmoji: _topicEmoji,
                       ),
                       const SizedBox(height: 18),
-                      _TopicStrip(
-                        topicsAsync: topicsAsync,
+                      _PathTopicProgressSection(
+                        summariesAsync: pathTopicsAsync,
                         onOpenTopic: (topic) => _openTopic(context, topic),
                         topicEmoji: _topicEmoji,
                       ),
@@ -294,6 +260,7 @@ class _StickyHeaderBar extends StatelessWidget {
         avatar: avatar,
         totalXp: totalXp,
         coins: coins,
+        onAvatarTap: () => context.go(Routes.profile),
       ),
     );
   }
@@ -305,34 +272,40 @@ class _HeaderBar extends StatelessWidget {
     required this.avatar,
     required this.totalXp,
     required this.coins,
+    required this.onAvatarTap,
   });
 
   final String childName;
   final String avatar;
   final int totalXp;
   final int coins;
+  final VoidCallback onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          width: 72,
-          height: 72,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFFFB12A),
-            border: Border.all(color: Colors.white, width: 4),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x5500367A),
-                blurRadius: 12,
-                offset: Offset(0, 5),
-              ),
-            ],
+        InkWell(
+          onTap: onAvatarTap,
+          customBorder: const CircleBorder(),
+          child: Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFFB12A),
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x5500367A),
+                  blurRadius: 12,
+                  offset: Offset(0, 5),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(avatar, style: const TextStyle(fontSize: 42)),
           ),
-          alignment: Alignment.center,
-          child: Text(avatar, style: const TextStyle(fontSize: 42)),
         ),
         const SizedBox(width: 10),
         Expanded(
@@ -542,6 +515,10 @@ class _Confetti extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
+  const _QuickActions({required this.missionsAsync});
+
+  final AsyncValue<List<HomeMission>> missionsAsync;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -558,55 +535,74 @@ class _QuickActions extends StatelessWidget {
           ),
         ],
       ),
-      child: const Row(
-        children: [
-          Expanded(
-            child: _QuickActionCard(
-              color: Color(0xFF08A5E8),
-              icon: '🐰',
-              title: 'Luyện\n3 phút',
-              cta: 'Quick Practice',
+      child: missionsAsync.when(
+        loading: () => const SizedBox(
+          height: 132,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (error, _) => SizedBox(
+          height: 132,
+          child: Center(
+            child: Text(
+              'Không tải được nhiệm vụ',
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
-          SizedBox(width: 8),
-          Expanded(
-            child: _QuickActionCard(
-              color: Color(0xFF36BF14),
-              icon: '❓',
-              title: 'Quiz\nhôm nay',
-              cta: 'Daily Quiz',
+        ),
+        data: (missions) {
+          if (missions.isEmpty) {
+            return const SizedBox(
+              height: 132,
+              child: Center(
+                child: Text(
+                  'Chưa có nhiệm vụ hôm nay',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            );
+          }
+
+          final useHorizontalScroll = missions.length > 3;
+          final cardWidth = useHorizontalScroll
+              ? 132.0
+              : (MediaQuery.sizeOf(context).width - 36 - 20 - 16) /
+                    missions.length;
+
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: [
+                for (var i = 0; i < missions.length; i++) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  SizedBox(
+                    width: cardWidth,
+                    child: _QuickActionCard(mission: missions[i]),
+                  ),
+                ],
+              ],
             ),
-          ),
-          SizedBox(width: 8),
-          Expanded(
-            child: _QuickActionCard(
-              color: Color(0xFFFF4F60),
-              icon: '🎙️',
-              title: 'Nói 1\ncâu',
-              cta: 'Speaking',
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 }
 
 class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({
-    required this.color,
-    required this.icon,
-    required this.title,
-    required this.cta,
-  });
+  const _QuickActionCard({required this.mission});
 
-  final Color color;
-  final String icon;
-  final String title;
-  final String cta;
+  final HomeMission mission;
 
   @override
   Widget build(BuildContext context) {
+    final progress = mission.targetValue == 0
+        ? 0.0
+        : (mission.progressValue / mission.targetValue).clamp(0.0, 1.0);
+
     return Container(
       height: 132,
       padding: const EdgeInsets.all(8),
@@ -614,7 +610,7 @@ class _QuickActionCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [color.withValues(alpha: 0.86), color],
+          colors: [mission.color.withValues(alpha: 0.86), mission.color],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white, width: 3),
@@ -625,11 +621,13 @@ class _QuickActionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 32)),
+              Text(mission.icon, style: const TextStyle(fontSize: 32)),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  title,
+                  _compactTitle(mission.title),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -647,6 +645,15 @@ class _QuickActionCard extends StatelessWidget {
               ),
             ],
           ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 7,
+              color: Colors.white,
+              backgroundColor: Colors.black.withValues(alpha: 0.18),
+            ),
+          ),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -655,7 +662,7 @@ class _QuickActionCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              cta,
+              mission.cta,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: HomeScreen._navy,
@@ -667,6 +674,13 @@ class _QuickActionCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _compactTitle(String title) {
+    final words = title.split(' ');
+    if (words.length <= 2) return title;
+    final midpoint = (words.length / 2).ceil();
+    return '${words.take(midpoint).join(' ')}\n${words.skip(midpoint).join(' ')}';
   }
 }
 
@@ -762,12 +776,17 @@ class _DailyChallengeCard extends StatelessWidget {
 }
 
 class _LearningProgressCard extends StatelessWidget {
-  const _LearningProgressCard({required this.summary});
+  const _LearningProgressCard({required this.skillsAsync});
 
-  final HomeLearningSummary summary;
+  final AsyncValue<List<SkillProgressSummary>> skillsAsync;
 
   @override
   Widget build(BuildContext context) {
+    final loadedSkills = skillsAsync.valueOrNull;
+    if (loadedSkills != null && loadedSkills.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       decoration: BoxDecoration(
@@ -787,25 +806,26 @@ class _LearningProgressCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          _ProgressTrack(
-            label: 'Vocabulary',
-            value: summary.levelProgress == 0 ? 0.4 : summary.levelProgress,
-            color: HomeScreen._green,
-            icon: '✅',
-          ),
-          const SizedBox(height: 8),
-          _ProgressTrack(
-            label: 'Phonics',
-            value: (summary.levelProgress + 0.25).clamp(0.0, 1.0),
-            color: HomeScreen._blue,
-            icon: '💎',
-          ),
-          const SizedBox(height: 8),
-          _ProgressTrack(
-            label: 'Speaking',
-            value: (summary.levelProgress * 0.7).clamp(0.2, 1.0),
-            color: HomeScreen._red,
-            icon: '🔶',
+          skillsAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 18),
+              child: CircularProgressIndicator(),
+            ),
+            error: (error, _) => Text(
+              'Không tải được tiến trình học',
+              style: TextStyle(
+                color: Colors.red.shade700,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            data: (skills) => Column(
+              children: [
+                for (var i = 0; i < skills.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 8),
+                  _ProgressTrack(skill: skills[i]),
+                ],
+              ],
+            ),
           ),
         ],
       ),
@@ -814,37 +834,31 @@ class _LearningProgressCard extends StatelessWidget {
 }
 
 class _ProgressTrack extends StatelessWidget {
-  const _ProgressTrack({
-    required this.label,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
+  const _ProgressTrack({required this.skill});
 
-  final String label;
-  final double value;
-  final Color color;
-  final String icon;
+  final SkillProgressSummary skill;
 
   @override
   Widget build(BuildContext context) {
-    final percent = (value * 100).round();
+    final percent = skill.progressPercent.round();
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.8)]),
+        gradient: LinearGradient(
+          colors: [skill.color, skill.color.withValues(alpha: 0.8)],
+        ),
         borderRadius: BorderRadius.circular(999),
         boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 6)],
       ),
       child: Row(
         children: [
-          Text(icon, style: const TextStyle(fontSize: 22)),
+          Text(skill.icon, style: const TextStyle(fontSize: 22)),
           const SizedBox(width: 8),
           SizedBox(
             width: 95,
             child: Text(
-              label,
+              skill.label,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.w900,
@@ -856,7 +870,7 @@ class _ProgressTrack extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
-                value: value,
+                value: skill.progress,
                 minHeight: 16,
                 color: HomeScreen._yellow,
                 backgroundColor: Colors.black.withValues(alpha: 0.18),
@@ -957,46 +971,47 @@ class _TodayLessonCard extends StatelessWidget {
   }
 }
 
-class _TopicStrip extends StatelessWidget {
-  const _TopicStrip({
-    required this.topicsAsync,
+class _PathTopicProgressSection extends StatelessWidget {
+  const _PathTopicProgressSection({
+    required this.summariesAsync,
     required this.onOpenTopic,
     required this.topicEmoji,
   });
 
-  final AsyncValue<List<Topic>> topicsAsync;
+  final AsyncValue<List<PathTopicSummary>> summariesAsync;
   final ValueChanged<Topic> onOpenTopic;
   final String Function(Topic topic) topicEmoji;
 
   @override
   Widget build(BuildContext context) {
-    return topicsAsync.when(
+    return summariesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Text(
-        'Không tải được chủ đề: $error',
+        'Không tải được lộ trình: $error',
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w800,
         ),
       ),
-      data: (topics) {
-        if (topics.isEmpty) return const SizedBox.shrink();
+      data: (summaries) {
+        if (summaries.isEmpty) return const SizedBox.shrink();
 
         return SizedBox(
-          height: 104,
+          height: 148,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
-            itemCount: topics.length,
+            itemCount: summaries.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (context, index) {
-              final topic = topics[index];
+              final summary = summaries[index];
+              final topic = summary.topic;
               return InkWell(
                 onTap: () => onOpenTopic(topic),
                 borderRadius: BorderRadius.circular(24),
                 child: Container(
-                  width: 106,
-                  padding: const EdgeInsets.all(10),
+                  width: 156,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -1009,21 +1024,54 @@ class _TopicStrip extends StatelessWidget {
                     ],
                   ),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        topicEmoji(topic),
-                        style: const TextStyle(fontSize: 34),
+                      Row(
+                        children: [
+                          Text(
+                            topicEmoji(topic),
+                            style: const TextStyle(fontSize: 30),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              topic.nameVi,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: HomeScreen._navy,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: summary.progress,
+                          minHeight: 10,
+                          color: HomeScreen._yellow,
+                          backgroundColor: topic.color.withValues(alpha: 0.35),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       Text(
-                        topic.nameVi,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
+                        '${summary.completedLessons}/${summary.totalLessons} bài học',
                         style: const TextStyle(
                           color: HomeScreen._navy,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Tối đa ${summary.totalXpReward} XP',
+                        style: const TextStyle(
+                          color: Color(0xFF0F766E),
                           fontWeight: FontWeight.w900,
+                          fontSize: 13,
                         ),
                       ),
                     ],

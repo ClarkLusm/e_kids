@@ -6,6 +6,11 @@ import 'package:uuid/uuid.dart';
 import '../../../../../core/database/daos/quiz_attempts_dao.dart';
 import '../../../../../core/database/database_providers.dart';
 import '../../../../auth/presentation/providers/auth_providers.dart';
+import '../../../../home/data/local/local_child_signal_repository.dart';
+import '../../../../home/data/local/local_level_progress_repository.dart';
+import '../../../../home/data/local/local_skill_progress_repository.dart';
+import '../../../../home/presentation/providers/learning_summary_providers.dart';
+import '../../../../home/presentation/providers/skill_progress_providers.dart';
 import '../../../fill_blank/domain/usecases/fill_blank_usecases.dart';
 import '../../../letter_scramble/domain/usecases/letter_scramble_usecases.dart';
 import '../../../listen_tap/domain/usecases/listen_tap_usecases.dart';
@@ -19,7 +24,12 @@ import '../../../word_pop/domain/usecases/word_pop_usecases.dart';
 final localQuizAttemptStoreProvider = Provider<LocalQuizAttemptStore>(
   (ref) => LocalQuizAttemptStore(
     QuizAttemptsDao(ref.watch(appDatabaseProvider)),
+    LocalSkillProgressRepository(ref.watch(appDatabaseProvider)),
+    LocalLevelProgressRepository(ref.watch(appDatabaseProvider)),
+    LocalChildSignalRepository(ref.watch(appDatabaseProvider)),
     childId: ref.watch(authStateProvider).valueOrNull?.id ?? 'mock_child_id',
+    onSkillProgressChanged: () => ref.invalidate(homeSkillProgressProvider),
+    onLevelProgressChanged: () => ref.invalidate(homeLearningSummaryProvider),
   ),
 );
 
@@ -87,13 +97,27 @@ final localWordPopAttemptRepositoryProvider =
     );
 
 class LocalQuizAttemptStore {
-  LocalQuizAttemptStore(this._attemptsDao, {required String childId})
-    : _childId = childId;
+  LocalQuizAttemptStore(
+    this._attemptsDao,
+    this._skillProgressRepository,
+    this._levelProgressRepository,
+    this._childSignalRepository, {
+    required String childId,
+    void Function()? onSkillProgressChanged,
+    void Function()? onLevelProgressChanged,
+  }) : _childId = childId,
+       _onSkillProgressChanged = onSkillProgressChanged,
+       _onLevelProgressChanged = onLevelProgressChanged;
 
   static const _uuid = Uuid();
 
   final QuizAttemptsDao _attemptsDao;
+  final LocalSkillProgressRepository _skillProgressRepository;
+  final LocalLevelProgressRepository _levelProgressRepository;
+  final LocalChildSignalRepository _childSignalRepository;
   final String _childId;
+  final void Function()? _onSkillProgressChanged;
+  final void Function()? _onLevelProgressChanged;
 
   Future<void> saveFillBlank(FillBlankResult result) {
     return _save(
@@ -240,12 +264,12 @@ class LocalQuizAttemptStore {
     int score = 0,
     int stars = 0,
     int hintsUsed = 0,
-  }) {
+  }) async {
     final normalizedAnswer = Map<String, dynamic>.from(answer)
       ..['child_id'] = childId
       ..['lesson_id'] = lessonId;
 
-    return _attemptsDao.insertAttempt(
+    await _attemptsDao.insertAttempt(
       QuizAttemptWrite(
         id: _uuid.v4(),
         childId: childId,
@@ -263,6 +287,25 @@ class LocalQuizAttemptStore {
         answerJson: jsonEncode(normalizedAnswer),
       ),
     );
+
+    await _skillProgressRepository.recordQuizAttempt(
+      childId: childId,
+      quizType: quizType,
+      isCorrect: isCorrect,
+      xpEarned: xpEarned,
+    );
+    _onSkillProgressChanged?.call();
+
+    await _levelProgressRepository.recordQuizAttempt(
+      childId: childId,
+      quizType: quizType,
+      isCorrect: isCorrect,
+      xpEarned: xpEarned,
+      answer: normalizedAnswer,
+    );
+    _onLevelProgressChanged?.call();
+
+    await _childSignalRepository.recomputeAfterQuizAttempt(childId);
   }
 }
 

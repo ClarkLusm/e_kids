@@ -1,4 +1,6 @@
+import 'package:e_kids/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -207,7 +209,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Icon(
             Icons.auto_awesome,
             size: 48,
-            color: primaryContainer.withOpacity(0.4),
+            color: primaryContainer.withValues(alpha: 0.4),
           ),
         ),
       ],
@@ -433,7 +435,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _parentZone() {
     return InkWell(
-      onTap: () {},
+      onTap: _openParentZone,
       borderRadius: BorderRadius.circular(12),
       child: Container(
         padding: const EdgeInsets.all(24),
@@ -485,12 +487,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  void _openParentZone() {
+    context.push(Routes.parentPin);
+  }
+
   Widget _bottomNav() {
     return Container(
       margin: const EdgeInsets.only(bottom: 0),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
-        color: secondaryContainer.withOpacity(0.7),
+        color: secondaryContainer.withValues(alpha: 0.7),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
         boxShadow: const [
           BoxShadow(

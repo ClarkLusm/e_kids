@@ -14,6 +14,10 @@ import 'package:e_kids/features/placement/domain/models/placement_result.dart';
 import 'package:e_kids/features/placement/presentation/screens/placement_intro_screen.dart';
 import 'package:e_kids/features/placement/presentation/screens/placement_result_screen.dart';
 import 'package:e_kids/features/placement/presentation/screens/placement_test_screen.dart';
+import 'package:e_kids/features/parent_dashboard/presentation/screens/parent_dashboard_screen.dart';
+import 'package:e_kids/features/parent_dashboard/presentation/screens/parent_pin_screen.dart';
+import 'package:e_kids/features/parent_dashboard/presentation/screens/skill_goal_settings_screen.dart';
+import 'package:e_kids/features/profile/presentation/screens/profile_screen.dart';
 import 'package:e_kids/features/splash/presentation/screens/splash_screen.dart';
 import 'package:e_kids/features/settings/presentation/screens/settings_screen.dart';
 import 'package:e_kids/features/auth/presentation/providers/auth_providers.dart';
@@ -117,9 +121,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const _LocalPlaceholderScreen(title: 'Leaderboard'),
       ),
       GoRoute(
+        path: Routes.parentPin,
+        builder: (_, __) => const ParentPinScreen(),
+      ),
+      GoRoute(
         path: Routes.parentDashboard,
-        builder: (_, __) =>
-            const _LocalPlaceholderScreen(title: 'Parent Dashboard'),
+        builder: (_, __) => const ParentDashboardScreen(),
+      ),
+      GoRoute(
+        path: Routes.parentSkillGoals,
+        builder: (_, __) => const SkillGoalSettingsScreen(),
       ),
       GoRoute(
         path: Routes.settings,
@@ -138,7 +149,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             index = 2;
           } else if (loc.startsWith(Routes.achievements)) {
             index = 3;
-          } else if (loc.startsWith('/profile')) {
+          } else if (loc.startsWith(Routes.profile)) {
             index = 4;
           }
 
@@ -161,7 +172,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                     context.go(Routes.achievements);
                     break;
                   case 4:
-                    context.go('/profile');
+                    context.go(Routes.profile);
                     break;
                 }
               },
@@ -179,8 +190,8 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const _LocalPlaceholderScreen(title: 'Play'),
           ),
           GoRoute(
-            path: '/profile',
-            builder: (_, __) => const _LocalPlaceholderScreen(title: 'Profile'),
+            path: Routes.profile,
+            builder: (_, __) => const ProfileScreen(),
           ),
         ],
       ),

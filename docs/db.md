@@ -49,9 +49,6 @@ child_profiles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   avatar_id TEXT NOT NULL,
-  level INTEGER NOT NULL DEFAULT 1,
-  total_xp INTEGER NOT NULL DEFAULT 0,
-  streak_days INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
   remote_id TEXT,
@@ -473,68 +470,425 @@ Các quiz khác có thể lưu dữ liệu riêng:
 - `sort_bucket`: `placements`.
 - `story_builder`: `submitted_sentence`.
 
-### Cách Tính quiz_attempts.xp_earned
+### Cách Tính XP
 
-`quiz_attempts.xp_earned` được tính khi controller quiz chuẩn bị lưu attempt. User không nhập trực tiếp giá trị này.
+XP không nên chỉ nằm trong `quiz_attempts`. Mỗi lần bé nhận XP cần ghi thêm một dòng vào `xp_events`, sau đó cộng vào `child_progress.total_xp`.
 
-Công thức chung:
+XP cơ bản mỗi bài học:
 
 ```text
-xp_earned = base_xp + bonus_xp - penalty_xp
+base_xp = lesson_base_xp * accuracy_multiplier * streak_multiplier + first_try_bonus
 ```
 
-Nếu trả lời sai hoặc không hoàn thành câu quiz:
+Hệ số:
 
 ```text
-xp_earned = 0
-```
+lesson_base_xp:
+  bài 5 từ        -> 10 XP
+  bài 10 từ       -> 25 XP
+  quiz đầy đủ     -> 50 XP
 
-Nếu trả lời đúng:
+accuracy_multiplier:
+  accuracy >= 90% -> *1.5
+  accuracy 70-89% -> *1.0
+  accuracy 50-69% -> *0.7
+  accuracy < 50%  -> *0.5
 
-```text
-base_xp:
-  difficulty = 1 -> 10 XP
-  difficulty = 2 -> 15 XP
-  difficulty = 3 -> 20 XP
-
-speed_bonus:
-  time_taken_ms <= 5000  -> +5 XP
-  time_taken_ms <= 10000 -> +2 XP
-  còn lại -> +0 XP
-
-no_hint_bonus:
-  hints_used == 0 -> +5 XP
+streak_multiplier:
+  streak 1-2 ngày   -> *1.0
+  streak 3-6 ngày   -> *1.1
+  streak 7-13 ngày  -> *1.25
+  streak >= 14 ngày -> *1.5
 
 first_try_bonus:
-  attempt_index == 1 -> +5 XP
-
-penalty:
-  hints_used * 2
+  +5 XP / câu đúng ngay lần đầu
 ```
-
-Kết quả cuối cùng được clamp trong khoảng `0..100`.
 
 Ví dụ:
 
 ```text
-difficulty = 2
-is_correct = true
-time_taken_ms = 4000
-hints_used = 0
-attempt_index = 1
+Bé làm quiz 10 từ: lesson_base_xp = 25
+Accuracy = 80% -> *1.0
+Streak = 8 ngày -> *1.25
+2 câu đúng ngay lần đầu -> +10
 
-xp_earned = 15 + 5 + 5 + 5 - 0 = 30
+total = 25 * 1.0 * 1.25 + 10 = 41 XP
 ```
 
-Trong code, rule này nằm ở shared quiz use case:
+XP từ daily mission:
 
 ```text
-lib/features/quiz/_shared/domain/usecases/calculate_quiz_xp_usecase.dart
+mission_xp = template_xp_reward * completion_bonus
+
+completion_bonus:
+  hoàn thành đúng hạn trong ngày -> *1.0
+  hoàn thành tất cả mission trong ngày -> +50 XP
 ```
 
-Các controller quiz gọi use case này trước khi save result. Khi Drift được nối với `quiz_questions`, field `difficulty` nên lấy từ `quiz_questions.difficulty`.
+XP từ streak milestone:
+
+```text
+3 ngày  -> +30 XP
+7 ngày  -> +100 XP
+14 ngày -> +250 XP
+30 ngày -> +500 XP + huy hiệu đặc biệt
+```
+
+### xp_events
+
+Log bất biến của mọi lần bé nhận XP.
+
+```sql
+xp_events (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  source_type TEXT NOT NULL,
+  source_id TEXT NOT NULL,
+  xp_amount INTEGER NOT NULL,
+  base_xp INTEGER NOT NULL DEFAULT 0,
+  accuracy_multiplier REAL NOT NULL DEFAULT 1,
+  streak_multiplier REAL NOT NULL DEFAULT 1,
+  first_try_bonus INTEGER NOT NULL DEFAULT 0,
+  metadata_json TEXT,
+  created_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id)
+)
+```
+
+`source_type` ví dụ: `lesson`, `quiz`, `daily_mission`, `streak_milestone`.
 
 ## XP Và Hoạt Động Ngày
+
+### child_progress
+
+Nguồn đọc nhanh cho level/XP hiện tại của bé. Bảng này được cập nhật từ `xp_events`, `quiz_attempts`, `word_mastery` và `level_definitions`.
+
+```sql
+child_progress (
+  child_id TEXT PRIMARY KEY,
+  current_level INTEGER NOT NULL DEFAULT 1,
+  current_xp INTEGER NOT NULL DEFAULT 0,
+  total_xp INTEGER NOT NULL DEFAULT 0,
+  xp_to_next_level INTEGER NOT NULL DEFAULT 150,
+  accuracy_7d REAL NOT NULL DEFAULT 0,
+  words_mastered INTEGER NOT NULL DEFAULT 0,
+  streak_days INTEGER NOT NULL DEFAULT 0,
+  mastery_blocked INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id)
+)
+```
+
+Ý nghĩa:
+
+- `total_xp`: tổng XP trọn đời, dùng để so với `level_definitions.xp_required`.
+- `current_xp`: XP trong level hiện tại, dùng để hiển thị progress.
+- `xp_to_next_level`: XP delta để lên level kế tiếp.
+- `mastery_blocked`: bé đã đủ XP nhưng chưa đủ `accuracy_7d` hoặc `words_mastered`.
+
+### level_definitions
+
+Định nghĩa level chính thức của app. Đây là rule hệ thống/API, phụ huynh không chỉnh trực tiếp.
+
+Level không phụ thuộc vào `skill_targets`. Skill chỉ dùng cho mục tiêu cá nhân hóa do phụ huynh giao bài.
+
+```sql
+level_definitions (
+  level INTEGER PRIMARY KEY,
+  xp_required INTEGER NOT NULL,
+  xp_delta INTEGER NOT NULL,
+  min_accuracy REAL NOT NULL DEFAULT 0,
+  min_words INTEGER NOT NULL DEFAULT 0,
+  title TEXT NOT NULL,
+  badge_reward_id TEXT,
+  unlock_feature TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER
+)
+```
+
+Ý nghĩa:
+
+- `xp_required`: tổng XP tối thiểu để đạt level này.
+- `xp_delta`: XP cần thêm từ level trước lên level này, dùng để hiển thị progress.
+- `min_accuracy`: accuracy tối thiểu trong 7 ngày gần nhất.
+- `min_words`: số từ có `word_mastery.status = mastered` tối thiểu.
+- `badge_reward_id`: huy hiệu tặng khi đạt level, có thể null ở phase đầu.
+- `unlock_feature`: feature mở khóa khi đạt level, ví dụ `speaking_challenge`.
+
+XP cần để lên level dùng đường cong bậc hai để càng lên cao càng cần nhiều XP hơn nhưng không tăng quá dốc:
+
+```text
+xp_delta(level -> level + 1) = 25 * level^2 + 25 * level + 100
+xp_required(level N) = tổng xp_delta từ level 1 đến N - 1
+```
+
+Ví dụ:
+
+```text
+level 1 -> 2: 150 XP
+level 2 -> 3: 250 XP
+level 3 -> 4: 400 XP
+```
+
+Rule tăng level:
+
+```text
+current_level = level cao nhất thỏa:
+  total_xp >= level_definitions.xp_required
+  accuracy_7_days >= level_definitions.min_accuracy
+  mastered_words >= level_definitions.min_words
+```
+
+Progress lên level kế tiếp:
+
+```text
+xp_progress       = XP từ current level đến next level
+accuracy_progress = accuracy_7_days / next.min_accuracy
+words_progress    = mastered_words / next.min_words
+
+level_progress_percent = min(xp_progress, accuracy_progress, words_progress)
+```
+
+Lấy `min(...)` để nếu XP đủ nhưng accuracy hoặc từ vựng chưa đạt thì bé chưa lên level.
+
+Nếu `mastery_blocked = true`, UI không hiển thị lỗi. Message nên là: "Bạn gần lên level rồi! Luyện thêm một chút nhé" và gợi ý bài cần làm.
+
+### word_mastery
+
+Tiến trình ghi nhớ từng từ của từng bé. Bảng này phục vụ mastery gate và spaced repetition.
+
+```sql
+word_mastery (
+  child_id TEXT NOT NULL,
+  word_id TEXT NOT NULL,
+  word TEXT,
+  times_seen INTEGER NOT NULL DEFAULT 0,
+  times_correct INTEGER NOT NULL DEFAULT 0,
+  times_wrong INTEGER NOT NULL DEFAULT 0,
+  mastery_score REAL NOT NULL DEFAULT 0,
+  last_seen_at INTEGER,
+  next_review_at INTEGER,
+  status TEXT NOT NULL DEFAULT 'learning',
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  PRIMARY KEY(child_id, word_id),
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id)
+)
+```
+
+Status:
+
+- `learning`: bé đang học từ này.
+- `mastered`: bé đã trả lời đúng đủ nhiều lần với `mastery_score` cao.
+- `forgotten`: bé gặp lại nhiều lần nhưng sai nhiều, cần ôn lại sớm.
+
+Rule tính:
+
+```text
+mastery_score = (times_correct / times_seen) * decay_factor
+
+decay_factor:
+  gặp lại trong 24h   -> 1.0
+  2-3 ngày chưa gặp   -> 0.9
+  4-7 ngày chưa gặp   -> 0.7
+  > 7 ngày chưa gặp   -> 0.5
+
+status:
+  mastery_score >= 0.8 AND times_seen >= 3 -> mastered
+  previously mastered AND decay về <= 0.5  -> forgotten
+  còn lại                                  -> learning
+```
+
+Phase local hiện tại ưu tiên resolve `word_id` từ `vocabulary_items.id`. Nếu quiz mock chưa có UUID từ API, app dùng fallback ổn định dạng `word:<normalized_word>`.
+
+### skill_targets
+
+Mục tiêu học theo kỹ năng cho từng path và level. Bảng này phục vụ Parent Zone: phụ huynh giao mục tiêu luyện tập riêng cho bé.
+
+Quan trọng: bảng này không dùng để quyết định tăng level, vì phụ huynh có thể chỉnh `required_units`.
+
+```sql
+skill_targets (
+  id TEXT PRIMARY KEY,
+  path_id TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  skill_key TEXT NOT NULL,
+  required_units INTEGER NOT NULL,
+  unit_type TEXT NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  UNIQUE(path_id, level, skill_key),
+  FOREIGN KEY(path_id) REFERENCES learning_paths(id)
+)
+```
+
+Ví dụ:
+
+- `vocabulary`: `30 words`
+- `listening`: `20 questions`
+- `speaking`: `10 utterances`
+
+### skill_progress
+
+Tiến trình kỹ năng của từng bé trong path/level hiện tại.
+
+```sql
+skill_progress (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  path_id TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  skill_key TEXT NOT NULL,
+  completed_units INTEGER NOT NULL DEFAULT 0,
+  required_units INTEGER NOT NULL,
+  progress_percent REAL NOT NULL DEFAULT 0,
+  correct_count INTEGER NOT NULL DEFAULT 0,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  earned_xp INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  UNIQUE(child_id, path_id, level, skill_key),
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id),
+  FOREIGN KEY(path_id) REFERENCES learning_paths(id)
+)
+```
+
+Rule tính:
+
+```text
+progress_percent = completed_units / required_units * 100
+```
+
+Trong phase hiện tại, app seed mục tiêu mặc định nếu DB rỗng và phụ huynh có thể chỉnh `required_units` trong Parent Zone.
+
+### mission_templates
+
+Template nhiệm vụ hằng ngày. Đây là dữ liệu nội dung, có thể seed local ở phase đầu và sync từ API/CMS sau này.
+
+```sql
+mission_templates (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  topic_scope TEXT NOT NULL DEFAULT 'any',
+  condition_json TEXT,
+  title TEXT NOT NULL,
+  description TEXT,
+  target_metric TEXT NOT NULL,
+  target_value INTEGER NOT NULL,
+  xp_reward INTEGER NOT NULL,
+  duration_est_min INTEGER NOT NULL,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER
+)
+```
+
+Ghi chú:
+
+- `type`: nhóm nhiệm vụ để render icon/màu/CTA, ví dụ `vocabulary`, `quiz`, `streak`, `review`, `speed`, `challenge`.
+- `target_metric`: chỉ số app cần đo, ví dụ `new_words`, `quiz_count`, `speaking_count`, `accuracy_percent`.
+- `condition_json`: rule chọn template phù hợp với tình trạng của bé, có thể để `NULL` ở phase local.
+- `title` có thể chứa placeholder như `{n}`, `{topic}`; giá trị cụ thể nằm trong `daily_missions.params_json`.
+
+### daily_missions
+
+Nhiệm vụ cụ thể được giao cho một bé trong một ngày.
+
+```sql
+daily_missions (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  date TEXT NOT NULL,
+  slot INTEGER NOT NULL DEFAULT 0,
+  mission_template_id TEXT NOT NULL,
+  params_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL DEFAULT 'pending',
+  progress_value INTEGER NOT NULL DEFAULT 0,
+  target_value INTEGER NOT NULL,
+  xp_reward INTEGER NOT NULL,
+  completed_at INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  UNIQUE(child_id, date, mission_template_id),
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id),
+  FOREIGN KEY(mission_template_id) REFERENCES mission_templates(id)
+)
+```
+
+Ghi chú:
+
+- `date` dùng format `yyyy-MM-dd`.
+- `slot` xác định vị trí mission trong ngày. Sau tuần đầu, app sinh 4 slot cố định: `1` dễ bắt buộc, `2` điểm yếu, `3` ôn tập, `4` thử thách.
+- `target_value` và `xp_reward` là snapshot từ template để nhiệm vụ hôm nay không đổi nếu template sync update giữa chừng.
+- `status`: `pending`, `completed`, `skipped`.
+
+### child_signals
+
+Snapshot tín hiệu học tập gần đây của bé. Bảng này là input cho mission engine từ tuần 2 trở đi. Tuần đầu app dùng bộ mission mặc định để thu thập dữ liệu trước khi cá nhân hóa sâu.
+
+```sql
+child_signals (
+  child_id TEXT PRIMARY KEY,
+  accuracy_7d REAL NOT NULL DEFAULT 0,
+  accuracy_by_topic TEXT NOT NULL DEFAULT '{}',
+  accuracy_by_type TEXT NOT NULL DEFAULT '{}',
+  avg_response_sec REAL NOT NULL DEFAULT 0,
+  weak_topics TEXT NOT NULL DEFAULT '[]',
+  due_for_review TEXT NOT NULL DEFAULT '[]',
+  days_since_new_words INTEGER NOT NULL DEFAULT 0,
+  streak_days INTEGER NOT NULL DEFAULT 0,
+  streak_at_risk INTEGER NOT NULL DEFAULT 0,
+  mission_completion_7d REAL NOT NULL DEFAULT 0,
+  preferred_mission_types TEXT NOT NULL DEFAULT '[]',
+  preferred_hour INTEGER NOT NULL DEFAULT 19,
+  updated_at INTEGER NOT NULL,
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id)
+)
+```
+
+Mission engine local:
+
+- Ngày 1: placement test ngắn 5 câu.
+- Ngày 2: học 5 từ chủ đề Animals.
+- Ngày 3: quiz 5 từ vừa học và học 3 từ mới.
+- Ngày 4: matching game và nghe phát âm.
+- Ngày 5: ôn tập tổng hợp tuần đầu.
+- Từ ngày 8: đọc `child_signals`, ghép với `mission_templates`, sinh 4 mission theo slot cố định.
+- Trước khi ghi `daily_missions`, engine kiểm tra rotation với mission hôm qua và giới hạn tổng thời lượng khoảng 20 phút/ngày.
 
 ### xp_events
 
@@ -589,6 +943,102 @@ daily_activity (
 `activity_date` dùng format `yyyy-MM-dd`.
 
 ## Thành Tựu
+
+### titles
+
+Catalog danh hiệu. Danh hiệu khác achievement ở chỗ bé có thể "đeo" một danh hiệu chính và một danh hiệu phụ trên UI.
+
+```sql
+titles (
+  id TEXT PRIMARY KEY,
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  tier INTEGER,
+  image_url TEXT,
+  animation TEXT,
+  color_hex TEXT,
+  description TEXT,
+  flavor_text TEXT,
+  unlock_condition_json TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 0,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER
+)
+```
+
+Quy ước:
+
+- `type`: `main` hoặc `sub`.
+- `tier`: dùng cho danh hiệu `main`, thường map với level.
+- `priority`: dùng để quyết định auto-equip danh hiệu `sub` mới nếu nhiều danh hiệu cùng unlock.
+- `unlock_condition_json`: điều kiện unlock, lưu dạng JSON text trong Drift.
+
+Ví dụ condition:
+
+```json
+{ "type": "level", "value": 10 }
+{ "type": "streak", "value": 7 }
+{ "type": "accuracy_7d", "value": 0.85 }
+{ "type": "speed_pct", "value": 0.30 }
+{ "type": "mission_days", "value": 5 }
+```
+
+Nếu cần nhiều điều kiện:
+
+```json
+{
+  "all": [
+    { "type": "level", "value": 10 },
+    { "type": "accuracy_7d", "value": 0.85 }
+  ]
+}
+```
+
+### child_titles
+
+Mapping danh hiệu đã unlock của từng bé.
+
+```sql
+child_titles (
+  id TEXT PRIMARY KEY,
+  child_id TEXT NOT NULL,
+  title_id TEXT NOT NULL,
+  title_type TEXT NOT NULL,
+  unlocked_at INTEGER NOT NULL,
+  is_equipped INTEGER NOT NULL DEFAULT 0,
+  equipped_at INTEGER,
+  remote_id TEXT,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  last_synced_at INTEGER,
+  deleted_at INTEGER,
+  UNIQUE(child_id, title_id),
+  FOREIGN KEY(child_id) REFERENCES child_profiles(id),
+  FOREIGN KEY(title_id) REFERENCES titles(id)
+)
+```
+
+`title_type` được denormalize từ `titles.type` để xử lý rule equip nhanh hơn:
+
+- Mỗi bé chỉ có một `main` title equipped.
+- Mỗi bé chỉ có một `sub` title equipped.
+- Khi equip title mới, app update `is_equipped = false` cho các title cùng `title_type`, rồi set title mới thành equipped trong cùng transaction.
+
+Flow unlock:
+
+```text
+Cập nhật child_progress
+-> lấy titles active chưa unlock
+-> evaluate unlock_condition_json
+-> đủ điều kiện: insert child_titles
+-> main: auto-equip
+-> sub: auto-equip nếu priority >= sub đang equipped
+```
 
 ### achievements
 
@@ -716,16 +1166,25 @@ Khi implement Drift, mỗi bảng có sync metadata riêng nên index `sync_stat
 child_profiles 1 - n lesson_progress
 child_profiles 1 - n child_learning_paths
 child_profiles 1 - n placement_sessions
+child_profiles 1 - n daily_missions
+child_profiles 1 - 1 child_progress
+child_profiles 1 - n skill_progress
+child_profiles 1 - n word_mastery
+child_profiles 1 - n xp_events
 child_profiles 1 - n learning_sessions
 child_profiles 1 - n quiz_sessions
 child_profiles 1 - n quiz_attempts
 child_profiles 1 - n vocabulary_progress
-child_profiles 1 - n xp_events
 child_profiles 1 - n daily_activity
+child_profiles 1 - n child_titles
 
 learning_paths 1 - n path_topics
 learning_paths 1 - n child_learning_paths
 learning_paths 1 - n placement_sessions
+learning_paths 1 - n skill_targets
+learning_paths 1 - n skill_progress
+mission_templates 1 - n daily_missions
+level_definitions 1 - n child_progress (qua child_progress.current_level)
 topics 1 - n path_topics
 topics 1 - n lessons
 lessons 1 - n quiz_questions
@@ -735,6 +1194,8 @@ lessons 1 - n quiz_sessions
 quiz_sessions 1 - n quiz_attempts
 quiz_questions 1 - n quiz_attempts
 vocabulary_items 1 - n vocabulary_progress
+vocabulary_items 1 - n word_mastery
+titles 1 - n child_titles
 achievements 1 - n child_achievements
 ```
 
@@ -746,11 +1207,15 @@ achievements 1 - n child_achievements
 4. `placement_sessions`
 5. `lessons`, `quiz_questions`, `vocabulary_items`
 6. `lesson_progress`
-7. `learning_sessions`, `quiz_sessions`, `quiz_attempts`
-8. `vocabulary_progress`
-9. `xp_events`, `daily_activity`
-10. `achievements`, `child_achievements`
-11. `app_settings`, `asset_cache`, `parent_pins`
+7. `level_definitions`, `word_mastery`, `child_progress`, `xp_events`
+8. `skill_targets`, `skill_progress`
+9. `mission_templates`, `daily_missions`, `child_signals`
+10. `learning_sessions`, `quiz_sessions`, `quiz_attempts`
+11. `vocabulary_progress`
+12. `daily_activity`
+13. `titles`, `child_titles`
+14. `achievements`, `child_achievements`
+15. `app_settings`, `asset_cache`, `parent_pins`
 
 ## Ghi Chú Cho Phase Hiện Tại
 
@@ -768,5 +1233,15 @@ Phase hiện tại chỉ cần tối thiểu:
 - `vocabulary_items`
 - `lesson_progress`
 - `quiz_attempts`
+- `level_definitions`
+- `word_mastery`
+- `child_progress`
+- `xp_events`
+- `skill_targets`
+- `skill_progress`
+- `mission_templates`
+- `daily_missions`
+- `titles`
+- `child_titles`
 
 Các bảng còn lại nên thiết kế sẵn trong tài liệu, nhưng có thể implement sau khi app cần dashboard, achievement, asset download hoặc sync API.

@@ -3,6 +3,18 @@ import 'package:drift/drift.dart';
 import '../../../features/lesson/domain/models/lesson_models.dart';
 import '../app_database.dart';
 
+class LessonProgressStats {
+  const LessonProgressStats({
+    required this.totalXp,
+    required this.completedLessons,
+    required this.activeProgressPercent,
+  });
+
+  final int totalXp;
+  final int completedLessons;
+  final double activeProgressPercent;
+}
+
 class LessonProgressWrite {
   const LessonProgressWrite({
     required this.childId,
@@ -32,6 +44,39 @@ class LessonProgressDao {
             .get();
 
     return {for (final row in rows) row.lessonId: _toDomain(row)};
+  }
+
+  Future<LessonProgressStats> getStatsByChild(String childId) async {
+    final rows =
+        await (_db.select(_db.lessonProgressEntries)..where(
+              (tbl) => tbl.childId.equals(childId) & tbl.deletedAt.isNull(),
+            ))
+            .get();
+
+    var totalXp = 0;
+    var completedLessons = 0;
+    LessonProgressEntry? activeRow;
+
+    for (final row in rows) {
+      totalXp += row.earnedXp;
+
+      final status = row.status;
+      if (status == LessonStatus.completed.name ||
+          status == LessonStatus.mastered.name) {
+        completedLessons++;
+      }
+
+      if (status == LessonStatus.inProgress.name &&
+          (activeRow == null || row.updatedAt > activeRow.updatedAt)) {
+        activeRow = row;
+      }
+    }
+
+    return LessonProgressStats(
+      totalXp: totalXp,
+      completedLessons: completedLessons,
+      activeProgressPercent: activeRow?.progressPercent ?? 0,
+    );
   }
 
   Future<LessonProgress?> getProgress({

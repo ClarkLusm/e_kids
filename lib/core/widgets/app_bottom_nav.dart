@@ -11,11 +11,11 @@ class AppBottomNav extends StatelessWidget {
   });
 
   static const _items = [
-    _NavData('🐶', 'Home', Color(0xFF0EA5E9)),
-    _NavData('🐼', 'Learn', Color(0xFF0EA5E9)),
-    _NavData('🧢', 'Quiz', Color(0xFF0EA5E9)),
-    _NavData('🏆', 'Rewards', Color(0xFF0EA5E9)),
-    _NavData('🧙', 'Profile', Color(0xFF0EA5E9)),
+    _NavData('🐶', 'Home'),
+    _NavData('🐼', 'Learn'),
+    _NavData('🧢', 'Quiz'),
+    _NavData('🏆', 'Rewards'),
+    _NavData('🧙', 'Profile'),
   ];
 
   @override
@@ -40,58 +40,73 @@ class AppBottomNav extends StatelessWidget {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: List.generate(_items.length, (i) {
           final active = i == currentIndex;
-          return GestureDetector(
-            onTap: () => onTap(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 68,
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              transform: Matrix4.translationValues(0, active ? -10 : 0, 0),
-              decoration: BoxDecoration(
-                color: active
-                    ? const Color(0xFFFFD22E)
-                    : Colors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Colors.white, width: active ? 3 : 1),
-                boxShadow: active
-                    ? const [
-                        BoxShadow(
-                          color: Color(0x66003477),
-                          blurRadius: 8,
-                          offset: Offset(0, 4),
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onTap(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 3,
+                    vertical: 4,
+                  ),
+                  transform: Matrix4.translationValues(0, active ? -10 : 0, 0),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? const Color(0xFFFFD22E)
+                        : Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(22),
+                    border: active
+                        ? Border.all(color: Colors.white, width: 3)
+                        : null,
+                    boxShadow: active
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x66003477),
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ]
+                        : const [],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _items[i].emoji,
+                        style: TextStyle(fontSize: active ? 29 : 25),
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _items[i].label,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: active
+                                ? const Color(0xFF073B7A)
+                                : Colors.white,
+                            shadows: active
+                                ? const []
+                                : const [
+                                    Shadow(
+                                      color: Color(0x66000000),
+                                      blurRadius: 2,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
+                          ),
                         ),
-                      ]
-                    : const [],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _items[i].emoji,
-                    style: TextStyle(fontSize: active ? 30 : 27),
+                      ),
+                    ],
                   ),
-                  Text(
-                    _items[i].label,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: active ? const Color(0xFF073B7A) : Colors.white,
-                      shadows: active
-                          ? const []
-                          : const [
-                              Shadow(
-                                color: Color(0x66000000),
-                                blurRadius: 2,
-                                offset: Offset(0, 1),
-                              ),
-                            ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           );
@@ -104,6 +119,5 @@ class AppBottomNav extends StatelessWidget {
 class _NavData {
   final String emoji;
   final String label;
-  final Color color;
-  const _NavData(this.emoji, this.label, this.color);
+  const _NavData(this.emoji, this.label);
 }
