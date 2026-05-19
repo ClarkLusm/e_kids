@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:e_kids/core/widgets/app_bottom_nav.dart';
+import 'package:e_kids/features/home/domain/models/home_mission.dart';
+import 'package:e_kids/features/home/presentation/screens/mission_flow_screens.dart';
 import 'package:e_kids/features/home/presentation/screens/home_screen.dart';
 import 'package:e_kids/features/lesson/presentation/screens/lesson_detail_screen.dart';
 import 'package:e_kids/features/lesson/presentation/screens/quiz_runner_screen.dart';
@@ -96,6 +98,34 @@ final routerProvider = Provider<GoRouter>((ref) {
           result: state.extra is PlacementResult
               ? state.extra as PlacementResult
               : null,
+        ),
+      ),
+      GoRoute(
+        path: Routes.missionBrief,
+        builder: (_, state) => _missionScreen(
+          state,
+          (mission) => MissionBriefScreen(mission: mission),
+        ),
+      ),
+      GoRoute(
+        path: Routes.missionWarmUp,
+        builder: (_, state) => _missionScreen(
+          state,
+          (mission) => MissionWarmUpScreen(mission: mission),
+        ),
+      ),
+      GoRoute(
+        path: Routes.missionActivity,
+        builder: (_, state) => _missionScreen(
+          state,
+          (mission) => MissionActivityScreen(mission: mission),
+        ),
+      ),
+      GoRoute(
+        path: Routes.missionResult,
+        builder: (_, state) => _missionScreen(
+          state,
+          (mission) => MissionResultScreen(mission: mission),
         ),
       ),
 
@@ -198,6 +228,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+Widget _missionScreen(
+  GoRouterState state,
+  Widget Function(HomeMission mission) builder,
+) {
+  final extra = state.extra;
+  if (extra is HomeMission) return builder(extra);
+  return const _LocalPlaceholderScreen(title: 'Mission');
+}
 
 class _LocalPlaceholderScreen extends StatelessWidget {
   const _LocalPlaceholderScreen({required this.title});

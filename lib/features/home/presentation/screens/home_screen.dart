@@ -56,11 +56,14 @@ class HomeScreen extends ConsumerWidget {
                     delegate: SliverChildListDelegate.fixed([
                       _HeroLevelPanel(summary: summary),
                       const SizedBox(height: 16),
-                      _QuickActions(missionsAsync: missionsAsync),
-                      const SizedBox(height: 14),
-                      _DailyChallengeCard(
-                        avatar: avatar,
-                        onStart: () => _openFirstTopic(context, topicsAsync),
+                      _QuickActions(
+                        missionsAsync: missionsAsync,
+                        onMissionTap: (mission) {
+                          final route = mission.isCompleted
+                              ? Routes.missionResult
+                              : Routes.missionBrief;
+                          context.push(route, extra: mission);
+                        },
                       ),
                       const SizedBox(height: 14),
                       _LearningProgressCard(skillsAsync: skillProgressAsync),
@@ -94,13 +97,6 @@ class HomeScreen extends ConsumerWidget {
         ],
       ),
     );
-  }
-
-  void _openFirstTopic(BuildContext context, AsyncValue<List<Topic>> topics) {
-    final topic = topics.valueOrNull?.firstOrNull;
-    if (topic != null) {
-      _openTopic(context, topic);
-    }
   }
 
   void _openTopic(BuildContext context, Topic topic) {
@@ -515,9 +511,13 @@ class _Confetti extends StatelessWidget {
 }
 
 class _QuickActions extends StatelessWidget {
-  const _QuickActions({required this.missionsAsync});
+  const _QuickActions({
+    required this.missionsAsync,
+    required this.onMissionTap,
+  });
 
   final AsyncValue<List<HomeMission>> missionsAsync;
+  final ValueChanged<HomeMission> onMissionTap;
 
   @override
   Widget build(BuildContext context) {
@@ -580,7 +580,10 @@ class _QuickActions extends StatelessWidget {
                   if (i > 0) const SizedBox(width: 8),
                   SizedBox(
                     width: cardWidth,
-                    child: _QuickActionCard(mission: missions[i]),
+                    child: _QuickActionCard(
+                      mission: missions[i],
+                      onTap: () => onMissionTap(missions[i]),
+                    ),
                   ),
                 ],
               ],
@@ -593,9 +596,10 @@ class _QuickActions extends StatelessWidget {
 }
 
 class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({required this.mission});
+  const _QuickActionCard({required this.mission, required this.onTap});
 
   final HomeMission mission;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -603,75 +607,88 @@ class _QuickActionCard extends StatelessWidget {
         ? 0.0
         : (mission.progressValue / mission.targetValue).clamp(0.0, 1.0);
 
-    return Container(
-      height: 132,
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [mission.color.withValues(alpha: 0.86), mission.color],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        height: 132,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: mission.isCompleted
+                ? [const Color(0xFF16A34A), const Color(0xFF15803D)]
+                : [mission.color.withValues(alpha: 0.86), mission.color],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white, width: 3),
+          boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8)],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8)],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Text(mission.icon, style: const TextStyle(fontSize: 32)),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  _compactTitle(mission.title),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                    height: 1,
-                    shadows: [
-                      Shadow(
-                        color: Color(0x66000000),
-                        blurRadius: 2,
-                        offset: Offset(0, 1),
-                      ),
-                    ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(
+                  mission.isCompleted ? '✅' : mission.icon,
+                  style: const TextStyle(fontSize: 30),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    _compactTitle(mission.title),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                      height: 1,
+                      shadows: [
+                        Shadow(
+                          color: Color(0x66000000),
+                          blurRadius: 2,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 7,
-              color: Colors.white,
-              backgroundColor: Colors.black.withValues(alpha: 0.18),
+              ],
             ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white,
+            ClipRRect(
               borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              mission.cta,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: HomeScreen._navy,
-                fontWeight: FontWeight.w900,
-                fontSize: 12,
+              child: LinearProgressIndicator(
+                value: mission.isCompleted ? 1 : progress,
+                minHeight: 7,
+                color: Colors.white,
+                backgroundColor: Colors.black.withValues(alpha: 0.18),
               ),
             ),
-          ),
-        ],
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              decoration: BoxDecoration(
+                color: mission.isCompleted
+                    ? const Color(0xFFE7FBEA)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                mission.isCompleted ? 'Hoàn thành' : 'Chưa làm',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: mission.isCompleted
+                      ? const Color(0xFF15803D)
+                      : const Color(0xFFF97316),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -681,97 +698,6 @@ class _QuickActionCard extends StatelessWidget {
     if (words.length <= 2) return title;
     final midpoint = (words.length / 2).ceil();
     return '${words.take(midpoint).join(' ')}\n${words.skip(midpoint).join(' ')}';
-  }
-}
-
-class _DailyChallengeCard extends StatelessWidget {
-  const _DailyChallengeCard({required this.avatar, required this.onStart});
-
-  final String avatar;
-  final VoidCallback onStart;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 126,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF008EED), Color(0xFF0057B8)],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: HomeScreen._orange, width: 5),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x44000000),
-            blurRadius: 12,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Text(avatar, style: const TextStyle(fontSize: 70)),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Thử Thách Hằng Ngày',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 22,
-                    shadows: [
-                      Shadow(
-                        color: Color(0x77003377),
-                        blurRadius: 3,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Hoàn thành thử thách để nhận thêm XP!',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    height: 1.1,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: onStart,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: HomeScreen._yellow,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(999),
-              ),
-              elevation: 7,
-              shadowColor: Colors.black45,
-              side: const BorderSide(color: Color(0xFFFFA300), width: 3),
-            ),
-            child: const Text(
-              'Bắt đầu',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

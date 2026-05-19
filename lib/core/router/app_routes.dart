@@ -7,6 +7,10 @@ abstract final class Routes {
   static const placementTest = '/placement/test';
   static const placementResult = '/placement/result';
   static const home = '/home';
+  static const missionBrief = '/mission/brief';
+  static const missionWarmUp = '/mission/warm-up';
+  static const missionActivity = '/mission/activity';
+  static const missionResult = '/mission/result';
   static const profile = '/profile';
   static const achievements = '/achievements';
   static const leaderboard = '/leaderboard';

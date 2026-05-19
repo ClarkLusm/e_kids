@@ -25,6 +25,37 @@ class LocalDailyMissionRepository {
     return rows.map(_toDomain).toList(growable: false);
   }
 
+  Future<int> getPreferredHour(String childId) async {
+    final row =
+        await (_db.select(_db.childSignals)
+              ..where((tbl) => tbl.childId.equals(childId))
+              ..limit(1))
+            .getSingleOrNull();
+    return row?.preferredHour ?? 19;
+  }
+
+  Future<void> completeMission(String missionId) async {
+    final row =
+        await (_db.select(_db.dailyMissions)
+              ..where((tbl) => tbl.id.equals(missionId))
+              ..limit(1))
+            .getSingleOrNull();
+    if (row == null) return;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    await (_db.update(
+      _db.dailyMissions,
+    )..where((tbl) => tbl.id.equals(missionId))).write(
+      db.DailyMissionsCompanion(
+        status: const Value('completed'),
+        progressValue: Value(row.targetValue),
+        completedAt: Value(now),
+        updatedAt: Value(now),
+        syncStatus: const Value('pending'),
+      ),
+    );
+  }
+
   Future<List<_MissionRow>> _getMissionRows({
     required String childId,
     required String date,
@@ -777,6 +808,7 @@ class LocalDailyMissionRepository {
       icon: _iconForType(row.template.type),
       color: _colorForType(row.template.type),
       status: row.daily.status,
+      params: params,
       progressValue: row.daily.progressValue,
       targetValue: row.daily.targetValue,
       xpReward: row.daily.xpReward,
